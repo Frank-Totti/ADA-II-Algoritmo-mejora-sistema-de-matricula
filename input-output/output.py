@@ -1,0 +1,1 @@
+# Logíca de la captura de los datos procesados por cada solución y procedimiento para escribirlos en la salida
