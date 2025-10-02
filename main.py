@@ -1,0 +1,1 @@
+# Unión de todos los segmentos y/o componentes

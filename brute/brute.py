@@ -1,0 +1,1 @@
+# Logíca de la solución por fuerza bruta
