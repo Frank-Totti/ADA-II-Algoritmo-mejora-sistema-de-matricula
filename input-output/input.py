@@ -1,0 +1,1 @@
+# Logíca de la lectura de los datos y almacenaje de ellos
