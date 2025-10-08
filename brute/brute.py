@@ -145,20 +145,26 @@ def main():
 
     # Diccionario de materias con su respectivo cupo
     materias = {
-        "M1": 3,
-        "M2": 4,
-        "M3": 2,
+        "1000": 5,
+        "1001": 4, 
+        "1002": 3
     }
+    
     maximo_materias = 7
     prioridad = [1,2,3,4,5]
 
     # Diccionario de estudiantes con sus preferencias (materia, prioridad)
     estudiantes = {
-        "ms1": [("M1", 5), ("M2", 2), ("M3", 1)],
-        "ms2": [("M1", 4), ("M2", 1), ("M3", 3)],
-        "ms3": [("M2", 3), ("M3", 2)],
-        "ms4": [("M1", 2), ("M3", 3)],
-        "ms5": [("M1", 3), ("M2", 2), ("M3", 3)]
+        "100": [("1000", 1)],
+        "101": [("1002", 2)],
+        "102": [("1001", 1)],
+        "103": [("1001", 4), ("1002", 1)],
+        "104": [("1000", 1)],
+        "105": [("1002", 2)],
+        "106": [("1001", 2)],
+        "107": [("1001", 3), ("1000", 1)],
+        "108": [("1001", 1), ("1000", 4), ("1002", 1)],
+        "109": [("1001", 1), ("1000", 3)]
     }
     
     if maximaPrioridadPermitida(prioridad, estudiantes):
@@ -169,9 +175,10 @@ def main():
         print("Algún estudiante excede la prioridad máxima permitida.")
         return
     
-    if len(estudiantes) > maximo_materias:
-        print("Número de estudiantes excede el máximo permitido.")
-        return
+    for estudiante, preferencias in estudiantes.items():
+        if len(preferencias) > maximo_materias:
+            print(f"El estudiante {estudiante} excede el máximo de materias permitidas ({maximo_materias}).")
+            return
 
     solucion_optima = construir_arbol(estudiantes, estudiantes, materias)
     # print("Solución óptima encontrada:")
