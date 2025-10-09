@@ -87,17 +87,16 @@ class Nodo:
     def __repr__(self):
         return {self.estudiante: self.materias_asignadas}
 
-def validar_cupos(solucion_completa, materias):
-        """Verifica que no se exceda el cupo de ninguna materia"""
-        conteo_materias = {}
-        for estudiante, materias_est in solucion_completa.items():
-            for materia in materias_est:
-                conteo_materias[materia] = conteo_materias.get(materia, 0) + 1
+def validar_cupos(solucion_completa, capacities):
+        """Verifica que no se exceda el cupo de ninguna materia usando índices"""
+        conteo_materias = [0] * len(capacities)  # Inicializar contador para cada índice
         
-        for materia, count in conteo_materias.items():
-            if count > materias[materia]:  # Excede el cupo
-                return False
-        return True
+        for estudiante, materias_est in solucion_completa.items():
+            for materia_idx in materias_est:  # materia_idx es directamente el índice
+                conteo_materias[materia_idx] += 1
+        
+        # Verificar que no se exceda ningún cupo
+        return all(count <= capacities[idx] for idx, count in enumerate(conteo_materias))
 
 # --- Construcción del árbol ---
 def construir_arbol(estudiantes_dict, estudiantes, materias):
@@ -142,47 +141,55 @@ def construir_arbol(estudiantes_dict, estudiantes, materias):
 
 def main():
     # --- Datos de entrada ---
-
-    # Diccionario de materias con su respectivo cupo
-    materias = {
-        "M1": 3,
-        "M2": 4,
-        "M3": 2,
+    
+    # Mapeo de códigos de curso a índices
+    COURSE_INDEX_BY_CODE = {
+        '1000': 0,
+        '1001': 1,
+        '1002': 2
     }
+    
+    # Lista de capacidades por índice de curso
+    CAPACITIES = [5, 4, 3]  # capacidades para cursos 0, 1, 2
+    
     maximo_materias = 7
     prioridad = [1,2,3,4,5]
 
-    # Diccionario de estudiantes con sus preferencias (materia, prioridad)
-    estudiantes = {
-        "ms1": [("M1", 5), ("M2", 2), ("M3", 1)],
-        "ms2": [("M1", 4), ("M2", 1), ("M3", 3)],
-        "ms3": [("M2", 3), ("M3", 2)],
-        "ms4": [("M1", 2), ("M3", 3)],
-        "ms5": [("M1", 3), ("M2", 2), ("M3", 3)]
+    # Diccionario de solicitudes por estudiante (materia_indice, prioridad)
+    REQUESTS_BY_STUDENT = {
+        "100": [(0, 1)],
+        "101": [(2, 2)],
+        "102": [(1, 1)],
+        "103": [(1, 4), (2, 1)],
+        "104": [(0, 1)],
+        "105": [(2, 2)],
+        "106": [(1, 2)],
+        "107": [(1, 3), (0, 1)],
+        "108": [(1, 1), (0, 4), (2, 1)],
+        "109": [(1, 1), (0, 3)]
     }
     
-    if maximaPrioridadPermitida(prioridad, estudiantes):
+    if maximaPrioridadPermitida(prioridad, REQUESTS_BY_STUDENT):
         print(f"Prioridades deben ser entre {min(prioridad)} y {max(prioridad)}.")
         return
     
-    if restriccionMaximoSumaPrioridades(estudiantes):
+    if restriccionMaximoSumaPrioridades(REQUESTS_BY_STUDENT):
         print("Algún estudiante excede la prioridad máxima permitida.")
         return
     
-    if len(estudiantes) > maximo_materias:
-        print("Número de estudiantes excede el máximo permitido.")
-        return
+    for estudiante, preferencias in REQUESTS_BY_STUDENT.items():
+        if len(preferencias) > maximo_materias:
+            print(f"El estudiante {estudiante} excede el máximo de materias permitidas ({maximo_materias}).")
+            return
 
-    solucion_optima = construir_arbol(estudiantes, estudiantes, materias)
-    # print("Solución óptima encontrada:")
-    # for estudiante, materias_asignadas in solucion_optima.items():
-    #     print(f" - {estudiante}: {materias_asignadas}")
-    # print("Con insatisfacción de:", calcular_insatisfaccion(solucion_optima, estudiantes))
-    print(round(calcular_insatisfaccion(solucion_optima, estudiantes), 5))
+    solucion_optima = construir_arbol(REQUESTS_BY_STUDENT, REQUESTS_BY_STUDENT, CAPACITIES)
+    print(round(calcular_insatisfaccion(solucion_optima, REQUESTS_BY_STUDENT), 5))
     for estudiante, materias_asignadas in solucion_optima.items():
         print(f"{estudiante}, {len(materias_asignadas)}")
-        for materia in materias_asignadas:
-            print(materia)
+        for materia_idx in materias_asignadas:
+            # Convertir el índice de vuelta al código de materia
+            codigo_materia = [code for code, idx in COURSE_INDEX_BY_CODE.items() if idx == materia_idx][0]
+            print(codigo_materia)
     
     
 if __name__ == "__main__":
