@@ -1,5 +1,7 @@
 # Logíca de la lectura de los datos y almacenaje de ellos
 import os
+from typing import Dict, List, Tuple
+
 
 def gamma(x: int) -> int:
     """Priority cap function: γ(x) = 3x - 1."""
