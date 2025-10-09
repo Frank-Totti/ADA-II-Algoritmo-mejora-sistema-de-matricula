@@ -1,108 +1,88 @@
-
+from functools import lru_cache # permite guardar en cache la información del estado de cada recursión que se haga
+import itertools # para realizar todas las posibles combinaciones
 
 def gamma(x: int) -> int:
     return 3 * x - 1
 
-def precompute_student_info(students):
-    info = []
-    for s in students:
-        # ordenar por prioridad descendente
-        prefs = sorted(s['prefs'], key=lambda t: -t[1])
-        m = len(prefs)
-        priorities = [p for (_, p) in prefs]
-        mats = [mat for (mat, _) in prefs]
-        T = sum(priorities)
-        sum_top = [0]
-        running = 0
-        for p in priorities:
-            running += p
-            sum_top.append(running)
-        f = []
-        gm = gamma(m) if m > 0 else 1
-        for k in range(0, m + 1):
-            if m == 0:
-                f.append(0.0)
-            else:
-                val = (1.0 - (k / m)) * ((T - sum_top[k]) / gm)
-                f.append(val)
-        info.append({'m': m, 'mats': mats, 'f': f})
-    return info
+# Cálculo de insatisfacción 
 
-def solve_dp(students, initial_caps):
-    info = precompute_student_info(students)
-    r = len(info)
-    initial_caps = tuple(initial_caps)
+def calcular_insatisfaccion(asignadas, opciones_totales):
 
-    memo = {}       
-    choice = {}    
+    k = len(opciones_totales)
+    if k == 0:
+        return 0.0 # Retorna 0 porque al no haber materias por asignar la insatisfacción es nula.
+    assigned_count = len(asignadas)
+    assigned_courses = {c for (c, _) in asignadas}
+    unassigned_sum = sum(p for (c, p) in opciones_totales if c not in assigned_courses) # Se suman las proridades de las materias que no les asignaron 
+    return (1 - assigned_count / k) * (unassigned_sum / gamma(k)) # Formula del enunciado
 
-    def dp(idx: int, caps ) -> float:
-        if idx == r:
-            return 0.0
-        key = (idx, caps)
-        if key in memo:
-            return memo[key]
 
-        student = info[idx]
-        m = student['m']
-        mats = student['mats']
-        fvals = student['f']
+# Generar todos los subconjuntos válidos
 
-        best = float('inf')
-        best_k = 0
-        best_caps = None
+def generar_subconjuntos(opciones):
+    """Genera todos los subconjuntos posibles de materias solicitadas por un estudiante."""
+    n = len(opciones)
+    for r in range(n + 1):
+        for comb in itertools.combinations(opciones, r):
+            yield comb
 
-        # probar asignar k materias (0..m)
-        for k in range(0, m + 1):
+#   Programa principal
+
+def dinamic(capacities, requests_by_student):
+
+    # Hacemos inmutables las solicitudes (para memoización)
+    requests_immutable = {s: tuple(reqs) for s, reqs in requests_by_student.items()}
+    students = list(requests_immutable.keys())
+    initial_caps = tuple(capacities)
+
+    # Diccionario para guardar las decisiones óptimas
+    choice = {}
+
+    @lru_cache(maxsize=None)
+    def dp(i, caps):
+        if i == len(students):
+            return 0.0  # cuando se completen todos los estudiantes se le suma 0 dado que ya no hay insatisfacción para este caso
+
+        student = students[i]
+        opciones = requests_immutable[student]
+        best = float("inf")
+        best_subset = ()
+
+        for subset in generar_subconjuntos(opciones):
+            # verifica si hay cupos en las materias
+            new_caps = list(caps)
             feasible = True
-            caps_list = list(caps)
-            for t in range(k):
-                mat_id = mats[t]
-                if caps_list[mat_id] <= 0:
+            for (c, _) in subset:
+                if new_caps[c] <= 0:
                     feasible = False
                     break
-                caps_list[mat_id] -= 1
+                new_caps[c] -= 1
             if not feasible:
                 continue
-            caps2 = tuple(caps_list)
-            val = fvals[k] + dp(idx + 1, caps2)
-            if val < best:
-                best = val
-                best_k = k
-                best_caps = caps2
 
-        memo[key] = best
-        choice[key] = (best_k, best_caps)
+            f_j = calcular_insatisfaccion(subset, opciones)
+            total = f_j + dp(i + 1, tuple(new_caps))
 
-        #print(best)
+            if total < best:
+                best = total
+                best_subset = subset
+
+        # Guardar la mejor decisión para este estado
+        choice[(i, caps)] = best_subset
         return best
 
-    min_cost = dp(0, initial_caps)
+    best_total = dp(0, initial_caps)
 
-    # reconstrucción de la asignación
-    assignment = []
-    idx = 0
-    caps = initial_caps
-    while idx < r:
-        k, next_caps = choice[(idx, caps)]
-        mats = info[idx]['mats'][:k]   # las materias que se le asignan a este estudiante
-        assignment.append((idx, mats))
-        caps = next_caps
-        idx += 1
+    asignaciones = {}
+    caps = list(initial_caps)
+    for i, student in enumerate(students):
+        subset = choice.get((i, tuple(caps)), ())
+        asignaciones[student] = [c for (c, _) in subset]
+        # actualizar capacidades
+        for (c, _) in subset:
+            caps[c] -= 1
 
-    return min_cost, assignment
+    promedio = best_total / len(students)
 
-if __name__ == "__main__":
-    students = [
-        {'prefs': [(0,5), (1,3), (2,2)]},
-        {'prefs': [(1,4), (2,3), (3,2)]},
-        {'prefs': [(0,4), (2,5)]},
-        {'prefs': [(1,2), (3,4)]},
-        {'prefs': [(0,3), (1,2), (2,1), (3,5)]}
-    ]
-    caps = [2,2,1,2]
-    min_total, assignment = solve_dp(students, caps)
-    print("Min insatisfacción total:", min_total/len(students))
-    print("Asignaciones:")
-    for est, mats in assignment:
-        print(f"Estudiante {est} -> Materias {mats}")
+    return asignaciones, promedio
+
