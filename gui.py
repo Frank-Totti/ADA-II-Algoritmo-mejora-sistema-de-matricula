@@ -354,8 +354,13 @@ class AlgorithmGUI:
         self.append_output(f"{GUIMessages.HEADER_VORAZ}\n")
         self.append_output(f"{GUIMessages.SEPARATOR_LONG}\n\n")
         
+        # Parsear entrada
+        course_index_by_code, capacities, requests_by_student = parse_input_file(self.file_path.get())
+        
+        self.append_output("Ejecutando algoritmo voraz...\n\n")
+        
         # Ejecutar algoritmo
-        assignments, unsatisfaction = rocV(self.file_path.get())
+        assignments, unsatisfaction = rocV(course_index_by_code, capacities, requests_by_student)
         
         # Mostrar resultados
         self.append_output(f"{GUIMessages.RESULT_ASSIGNMENT}\n")
