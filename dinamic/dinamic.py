@@ -85,3 +85,30 @@ def dinamic(capacities, requests_by_student):
     promedio = best_total / len(students)
 
     return asignaciones, promedio
+
+
+def rocPD(course_index_by_code, capacities, requests_by_student):
+    """
+    Wrapper para el algoritmo de programación dinámica.
+    
+    Args:
+        course_index_by_code: Diccionario que mapea códigos de materias a índices
+        capacities: Lista de capacidades por materia (índice)
+        requests_by_student: Diccionario de solicitudes por estudiante
+        
+    Returns:
+        tuple: (asignaciones_con_codigos, insatisfaccion_promedio)
+    """
+    # Ejecutar el algoritmo dinámico
+    asignaciones, promedio = dinamic(capacities, requests_by_student)
+    
+    # Invertir el mapeo de índices a códigos
+    course_code_by_index = {idx: code for code, idx in course_index_by_code.items()}
+    
+    # Convertir las asignaciones de índices a códigos de materia
+    asignaciones_con_codigos = {}
+    for student, materias_idx in asignaciones.items():
+        codigos = [course_code_by_index.get(idx, str(idx)) for idx in materias_idx]
+        asignaciones_con_codigos[student] = codigos
+    
+    return asignaciones_con_codigos, promedio
