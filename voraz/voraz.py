@@ -1,4 +1,5 @@
-# Logíca de la solución voraz"""
+# Logíca de la solución voraz
+"""
 Algoritmo Voraz para Repartición Óptima de Cupos
 ================================================
 
@@ -25,7 +26,7 @@ from typing import Dict, List, Tuple
 
 # Configuración de imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'input-output'))
-from utils_insatisfaccion import calcular_insatisfaccion
+# from utils_insatisfaccion import calcular_insatisfaccion  # No disponible, usar fallback
 from input import parse_input_file
 
 def ordenar_solicitudes_por_prioridad(lista_solicitudes: List[Tuple[int, str, int]]) -> List[Tuple[int, str, int]]:
@@ -249,7 +250,10 @@ def rocV(file_path: str) -> Tuple[Dict[str, List[str]], float]:
                 student_requests.append((course_code, priority))
             E_format.append((student_code, student_requests))
         
-        unsatisfaction = calcular_insatisfaccion(assignments, E_format)
+        # Usar directamente la función fallback ya que utils_insatisfaccion no existe
+        unsatisfaction = calcular_insatisfaccion_fallback(
+            assignments, requests_by_student, course_code_by_index
+        )
     except Exception:
         # Cálculo alternativo en caso de error
         unsatisfaction = calcular_insatisfaccion_fallback(
