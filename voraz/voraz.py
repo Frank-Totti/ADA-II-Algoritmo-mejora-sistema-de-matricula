@@ -5,7 +5,7 @@ Algoritmo Voraz para Repartición Óptima de Cupos
 
 Proyecto: Análisis y Diseño de Algoritmos II
 Algoritmo: rocV - Estrategia VDC (Variable Demand Criticality)
-Fecha: 13 de Octubre 2025
+Fecha: 14 de Octubre 2025
 
 Descripción:
     Implementa un algoritmo voraz que minimiza la insatisfacción promedio
@@ -26,266 +26,135 @@ from typing import Dict, List, Tuple
 
 # Configuración de imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'input-output'))
-# from utils_insatisfaccion import calcular_insatisfaccion  # No disponible, usar fallback
-from input import parse_input_file
+from input import gamma
 
-def ordenar_solicitudes_por_prioridad(lista_solicitudes: List[Tuple[int, str, int]]) -> List[Tuple[int, str, int]]:
+def calcular_insatisfaccion(asignadas, opciones_totales):
     """
-    Ordena las solicitudes por prioridad en orden descendente.
+    Calcula la insatisfacción de un estudiante según la fórmula del proyecto.
+    
+    Fórmula: (1 - k'/k) * (Σp_no_asignadas / γ(k))
+    donde:
+        - k = número total de materias solicitadas
+        - k' = número de materias asignadas
+        - γ(k) = 3k - 1
     
     Args:
-        lista_solicitudes: Lista de tuplas (prioridad, estudiante, curso_idx)
+        asignadas: Conjunto de códigos de materias asignadas
+        opciones_totales: Lista de tuplas (codigo_materia, prioridad) solicitadas
         
     Returns:
-        Lista ordenada por prioridad de mayor a menor
-        
-    Complejidad: O(n²)
+        float: Valor de insatisfacción del estudiante
     """
-    n = len(lista_solicitudes)
-    # Crear copia para preservar la lista original
-    solicitudes_copia = []
-    for item in lista_solicitudes:
-        solicitudes_copia.append(item)
+    k = len(opciones_totales)
+    if k == 0:
+        return 0.0
     
-    # Algoritmo de ordenamiento burbuja
+    assigned_count = len(asignadas)
+    unassigned_sum = sum(p for (c, p) in opciones_totales if c not in asignadas)
+    
+    return (1 - assigned_count / k) * (unassigned_sum / gamma(k))
+
+
+def ordenar_por_prioridad(solicitudes):
+    """
+    Ordena solicitudes por prioridad en orden descendente usando bubble sort.
+    
+    Args:
+        solicitudes: Lista de tuplas (prioridad, estudiante, curso_idx)
+        
+    Returns:
+        Lista ordenada por prioridad (mayor a menor)
+    """
+    n = len(solicitudes)
+    result = list(solicitudes)  # Crear copia
+    
     for i in range(n):
-        intercambio_realizado = False
-        
+        intercambiado = False
         for j in range(0, n - i - 1):
-            # Comparar prioridades (orden descendente)
-            if solicitudes_copia[j][0] < solicitudes_copia[j + 1][0]:
-                # Intercambiar elementos
-                temp = solicitudes_copia[j]
-                solicitudes_copia[j] = solicitudes_copia[j + 1]
-                solicitudes_copia[j + 1] = temp
-                intercambio_realizado = True
-        
-        # Optimización: terminar si la lista está ordenada
-        if not intercambio_realizado:
+            if result[j][0] < result[j + 1][0]:
+                result[j], result[j + 1] = result[j + 1], result[j]
+                intercambiado = True
+        if not intercambiado:
             break
     
-    return solicitudes_copia
+    return result
 
 
-def copiar_lista(lista_original: List[int]) -> List[int]:
+def voraz(capacities, requests_by_student):
     """
-    Crea una copia independiente de una lista.
+    Algoritmo voraz para asignación de cupos.
+    
+    Estrategia: Procesar todas las solicitudes ordenadas por prioridad descendente,
+    asignando cupos mientras haya disponibilidad.
     
     Args:
-        lista_original: Lista de enteros a copiar
+        capacities: Lista con capacidades de cada materia (por índice)
+        requests_by_student: Diccionario {codigo_estudiante: [(idx_materia, prioridad), ...]}
         
     Returns:
-        Nueva lista con los mismos elementos
+        tuple: (asignaciones, insatisfaccion_promedio)
+            - asignaciones: Dict[str, List[int]] - materias asignadas por estudiante (índices)
+            - insatisfaccion_promedio: float
     """
-    lista_copia = []
-    for elemento in lista_original:
-        lista_copia.append(elemento)
-    return lista_copia
-
-
-def sumar_elementos(lista: List[int]) -> int:
-    """
-    Calcula la suma total de elementos en una lista.
+    # Inicializar capacidades restantes y asignaciones
+    remaining_caps = list(capacities)
+    assignments = {student: [] for student in requests_by_student.keys()}
     
-    Args:
-        lista: Lista de números enteros
-        
-    Returns:
-        Suma total de todos los elementos
-    """
-    total = 0
-    for elemento in lista:
-        total += elemento
-    return total
-
-
-def contar_asignaciones(assignments: Dict[str, List[str]]) -> int:
-    """
-    Cuenta el total de asignaciones realizadas.
-    
-    Args:
-        assignments: Diccionario de asignaciones por estudiante
-        
-    Returns:
-        Número total de asignaciones realizadas
-    """
-    total_asignaciones = 0
-    for estudiante in assignments:
-        total_asignaciones += len(assignments[estudiante])
-    return total_asignaciones
-
-
-def contar_solicitudes(requests_by_student: Dict[str, List[Tuple[int, int]]]) -> int:
-    """
-    Cuenta el total de solicitudes realizadas.
-    
-    Args:
-        requests_by_student: Diccionario de solicitudes por estudiante
-        
-    Returns:
-        Número total de solicitudes realizadas
-    """
-    total_solicitudes = 0
-    for estudiante in requests_by_student:
-        total_solicitudes += len(requests_by_student[estudiante])
-    return total_solicitudes
-
-
-def contar_estudiantes_atendidos(assignments: Dict[str, List[str]]) -> int:
-    """
-    Cuenta cuántos estudiantes recibieron al menos una asignación.
-    
-    Args:
-        assignments: Diccionario de asignaciones por estudiante
-        
-    Returns:
-        Número de estudiantes que recibieron al menos una materia
-    """
-    estudiantes_atendidos = 0
-    for estudiante in assignments:
-        if len(assignments[estudiante]) > 0:
-            estudiantes_atendidos += 1
-    return estudiantes_atendidos
-
-
-def inicializar_capacidades(capacities: List[int]) -> List[int]:
-    """
-    Inicializa las capacidades disponibles de las materias.
-    
-    Args:
-        capacities: Lista con las capacidades iniciales de cada materia
-        
-    Returns:
-        Lista con capacidades disponibles para asignación
-    """
-    return copiar_lista(capacities)
-
-
-def calcular_insatisfaccion_fallback(assignments: Dict[str, List[str]], 
-                                   requests_by_student: Dict[str, List[Tuple[int, int]]],
-                                   course_code_by_index: Dict[int, str]) -> float:
-    """
-    Cálculo de insatisfacción como respaldo en caso de errores.
-    
-    Args:
-        assignments: Diccionario de asignaciones por estudiante
-        requests_by_student: Solicitudes por estudiante en formato índice
-        course_code_by_index: Mapeo de índices a códigos de materia
-        
-    Returns:
-        Insatisfacción promedio calculada
-    """
-    total_insatisfaction = 0.0
-    total_students = len(requests_by_student)
-    
-    for student_code, requests in requests_by_student.items():
-        assigned_courses = set(assignments.get(student_code, []))
-        student_insatisfaction = 0.0
-        
-        # Sumar prioridades de materias no asignadas
-        for course_idx, priority in requests:
-            course_code = course_code_by_index[course_idx]
-            if course_code not in assigned_courses:
-                student_insatisfaction += priority
-        
-        total_insatisfaction += student_insatisfaction
-    
-    return total_insatisfaction / total_students if total_students > 0 else 0.0
-
-
-def rocV(file_path: str) -> Tuple[Dict[str, List[str]], float]:
-    """
-    Algoritmo Voraz VDC (Variable Demand Criticality) para asignación óptima de cupos.
-    
-    Implementa una estrategia voraz que prioriza las solicitudes con mayor prioridad
-    para minimizar la insatisfacción promedio en la asignación de cupos.
-    
-    Args:
-        file_path: Ruta al archivo de entrada con formato del proyecto grupal
-        
-    Returns:
-        Tupla con:
-            - assignments: Diccionario {codigo_estudiante: [codigos_materias_asignadas]}
-            - unsatisfaction: Valor de insatisfacción promedio (float)
-    
-    Raises:
-        FileNotFoundError: Si el archivo de entrada no existe
-        ValueError: Si hay errores en el formato o validación de datos
-    """
-    # FASE 1: Parsear archivo de entrada
-    course_index_by_code, capacities, requests_by_student = parse_input_file(file_path)
-    
-    # FASE 2: Preparar estructuras de datos
-    course_code_by_index = {idx: code for code, idx in course_index_by_code.items()}
-    remaining_capacities = inicializar_capacidades(capacities)
-    assignments = {student_code: [] for student_code in requests_by_student.keys()}
-    
-    # FASE 3: Recopilar todas las solicitudes
+    # Recopilar todas las solicitudes con formato (prioridad, estudiante, idx_materia)
     all_requests = []
     for student_code, requests in requests_by_student.items():
         for course_idx, priority in requests:
             all_requests.append((priority, student_code, course_idx))
     
-    # FASE 4: Aplicar estrategia voraz - ordenar por prioridad descendente (implementación manual)
-    all_requests = ordenar_solicitudes_por_prioridad(all_requests)
+    # Ordenar por prioridad descendente
+    all_requests = ordenar_por_prioridad(all_requests)
     
-    # FASE 5: Asignar cupos según disponibilidad
+    # Asignar cupos según disponibilidad
     for priority, student_code, course_idx in all_requests:
-        if remaining_capacities[course_idx] > 0:
-            course_code = course_code_by_index[course_idx]
-            
-            # Evitar asignaciones duplicadas por estudiante
-            if course_code not in assignments[student_code]:
-                assignments[student_code].append(course_code)
-                remaining_capacities[course_idx] -= 1
+        if remaining_caps[course_idx] > 0:
+            # Verificar que el estudiante no tenga ya asignada esta materia
+            if course_idx not in assignments[student_code]:
+                assignments[student_code].append(course_idx)
+                remaining_caps[course_idx] -= 1
     
-    # FASE 6: Calcular insatisfacción resultante
-    try:
-        # Convertir a formato compatible para cálculo de insatisfacción
-        E_format = []
-        for student_code, requests in requests_by_student.items():
-            student_requests = []
-            for course_idx, priority in requests:
-                course_code = course_code_by_index[course_idx]
-                student_requests.append((course_code, priority))
-            E_format.append((student_code, student_requests))
-        
-        # Usar directamente la función fallback ya que utils_insatisfaccion no existe
-        unsatisfaction = calcular_insatisfaccion_fallback(
-            assignments, requests_by_student, course_code_by_index
-        )
-    except Exception:
-        # Cálculo alternativo en caso de error
-        unsatisfaction = calcular_insatisfaccion_fallback(
-            assignments, requests_by_student, course_code_by_index
-        )
+    # Calcular insatisfacción promedio
+    total_insatisfaction = 0.0
+    num_students = len(requests_by_student)
     
-    return assignments, unsatisfaction
+    for student_code, requests in requests_by_student.items():
+        assigned_set = set(assignments[student_code])
+        student_insatisfaction = calcular_insatisfaccion(assigned_set, requests)
+        total_insatisfaction += student_insatisfaction
+    
+    promedio = total_insatisfaction / num_students if num_students > 0 else 0.0
+    
+    return assignments, promedio
 
 
-def generar_estadisticas(assignments: Dict[str, List[str]], 
-                        capacities: List[int], 
-                        requests_by_student: Dict[str, List[Tuple[int, int]]]) -> Dict[str, any]:
+def rocV(course_index_by_code, capacities, requests_by_student):
     """
-    Genera estadísticas detalladas del resultado de la asignación.
+    Wrapper para el algoritmo voraz.
+    
+    Convierte las asignaciones de índices a códigos de materia.
     
     Args:
-        assignments: Asignaciones realizadas por estudiante
-        capacities: Capacidades totales por materia
-        requests_by_student: Solicitudes originales de los estudiantes
-    
+        course_index_by_code: Diccionario que mapea códigos de materias a índices
+        capacities: Lista de capacidades por materia (índice)
+        requests_by_student: Diccionario de solicitudes por estudiante
+        
     Returns:
-        Diccionario con estadísticas de la asignación
+        tuple: (asignaciones_con_codigos, insatisfaccion_promedio)
     """
-    total_assignments = contar_asignaciones(assignments)
-    total_capacity = sumar_elementos(capacities)
-    total_requests = contar_solicitudes(requests_by_student)
+    # Ejecutar el algoritmo voraz
+    asignaciones, promedio = voraz(capacities, requests_by_student)
     
-    return {
-        'total_asignaciones': total_assignments,
-        'capacidad_total': total_capacity,
-        'total_solicitudes': total_requests,
-        'eficiencia_uso': (total_assignments / total_capacity) * 100 if total_capacity > 0 else 0,
-        'tasa_satisfaccion': (total_assignments / total_requests) * 100 if total_requests > 0 else 0,
-        'estudiantes_atendidos': contar_estudiantes_atendidos(assignments)
-    }
+    # Invertir el mapeo de índices a códigos
+    course_code_by_index = {idx: code for code, idx in course_index_by_code.items()}
+    
+    # Convertir las asignaciones de índices a códigos de materia
+    asignaciones_con_codigos = {}
+    for student, materias_idx in asignaciones.items():
+        codigos = [course_code_by_index.get(idx, str(idx)) for idx in materias_idx]
+        asignaciones_con_codigos[student] = codigos
+    
+    return asignaciones_con_codigos, promedio
