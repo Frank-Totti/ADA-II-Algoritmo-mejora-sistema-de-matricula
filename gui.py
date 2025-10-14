@@ -19,6 +19,9 @@ from typing import Dict, List, Tuple
 import traceback
 import time
 import importlib.util
+import csv
+import json
+import threading
 
 # Importar estilos y configuración
 from gui_styles import GUIStyles, GUIIcons, GUIMessages
@@ -101,6 +104,14 @@ class AlgorithmGUI:
         # Variables
         self.file_path = tk.StringVar()
         self.algorithm = tk.StringVar(value="voraz")
+        # Datos acumulados para la tabla de resultados
+        self.results = []  # lista de dicts: {algorithm, file, cost, time}
+        self.stop_event = threading.Event()
+        self.worker_thread = None
+        self.next_result_id = 1
+        # Captura de salida por ejecución
+        self.capture_output = False
+        self.current_output = []
         
         # Configurar estilos personalizados
         GUIStyles.configure_styles()
@@ -210,10 +221,18 @@ class AlgorithmGUI:
         button_frame.grid(row=3, column=0, pady=15)
         
         self.run_btn = ttk.Button(button_frame, 
-                                 text=GUIMessages.BTN_RUN, 
-                                 command=self.run_algorithm, 
-                                 style='Accent.TButton')
+                                   text=GUIMessages.BTN_RUN, 
+                                   command=self.run_algorithm, 
+                                   style='Accent.TButton')
         self.run_btn.pack(side=tk.LEFT, padx=8)
+        
+        # Botón para detener la ejecución
+        self.stop_btn = ttk.Button(button_frame,
+                                   text="Detener",
+                                   command=self.stop_execution,
+                                   style='Secondary.TButton')
+        self.stop_btn.pack(side=tk.LEFT, padx=8)
+        self.stop_btn.config(state='disabled')
         
         self.clear_btn = ttk.Button(button_frame, 
                                    text=GUIMessages.BTN_CLEAR, 
@@ -222,12 +241,16 @@ class AlgorithmGUI:
         self.clear_btn.pack(side=tk.LEFT, padx=8)
         
         # ===== SECCIÓN 4: Área de salida =====
-        output_frame = ttk.LabelFrame(main_frame, 
-                                     text=GUIMessages.SECTION_OUTPUT,
-                                     padding=str(GUIStyles.DIMENSIONS['padding_medium']),
-                                     style='Dark.TLabelframe')
+        output_frame = ttk.LabelFrame(
+            main_frame,
+            text=GUIMessages.SECTION_OUTPUT,
+            padding=str(GUIStyles.DIMENSIONS['padding_medium']),
+            style='Dark.TLabelframe'
+        )
         output_frame.grid(row=4, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=8)
-        output_frame.columnconfigure(0, weight=1)
+        # Dos columnas: izquierda (salida), derecha (tabla)
+        output_frame.columnconfigure(0, weight=2)
+        output_frame.columnconfigure(1, weight=1)
         output_frame.rowconfigure(0, weight=1)
         
         # Text widget con scroll para mostrar la salida con colores oscuros
@@ -246,7 +269,50 @@ class AlgorithmGUI:
             relief=tk.FLAT,
             borderwidth=2
         )
-        self.output_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.output_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 10))
+
+        # Panel derecho: Tabla de resultados y controles
+        right_panel = ttk.Frame(output_frame, style='Medium.TFrame')
+        right_panel.grid(row=0, column=1, sticky=(tk.N, tk.E, tk.S, tk.W))
+        right_panel.columnconfigure(0, weight=1)
+        right_panel.rowconfigure(1, weight=1)
+
+        table_label = ttk.Label(right_panel, text="Resultados (comparación)", style='Dark.TLabel')
+        table_label.grid(row=0, column=0, sticky=tk.W, pady=(0, 6))
+
+        # Treeview para resultados
+        columns = ("algoritmo", "archivo", "costo", "tiempo")
+        self.results_table = ttk.Treeview(right_panel, columns=columns, show='headings', height=10)
+        self.results_table.heading("algoritmo", text="Algoritmo")
+        self.results_table.heading("archivo", text="Archivo")
+        self.results_table.heading("costo", text="Insatisfacción")
+        self.results_table.heading("tiempo", text="Tiempo (s)")
+        self.results_table.column("algoritmo", width=120, anchor=tk.W)
+        self.results_table.column("archivo", width=140, anchor=tk.W)
+        self.results_table.column("costo", width=110, anchor=tk.E)
+        self.results_table.column("tiempo", width=90, anchor=tk.E)
+        self.results_table.grid(row=1, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+
+        # Scrollbar vertical para la tabla
+        scrollbar = ttk.Scrollbar(right_panel, orient=tk.VERTICAL, command=self.results_table.yview)
+        self.results_table.configure(yscroll=scrollbar.set)
+        scrollbar.grid(row=1, column=1, sticky=(tk.N, tk.S))
+
+        # Botones de acciones de la tabla
+        table_btns = ttk.Frame(right_panel, style='Medium.TFrame')
+        table_btns.grid(row=2, column=0, columnspan=2, sticky=tk.E, pady=(8,0))
+        save_btn = ttk.Button(table_btns, text="Guardar CSV", command=self.save_results_csv, style='Secondary.TButton')
+        save_btn.pack(side=tk.RIGHT, padx=5)
+        clear_tbl_btn = ttk.Button(table_btns, text="Limpiar Tabla", command=self.clear_results_table, style='Secondary.TButton')
+        clear_tbl_btn.pack(side=tk.RIGHT, padx=5)
+        delete_btn = ttk.Button(table_btns, text="Eliminar Selección", command=self.delete_selected_results, style='Secondary.TButton')
+        delete_btn.pack(side=tk.RIGHT, padx=5)
+        view_btn = ttk.Button(table_btns, text="Ver Detalle", command=self.show_selected_popup, style='Secondary.TButton')
+        view_btn.pack(side=tk.RIGHT, padx=5)
+        # Atajo de teclado Supr/Del para eliminar
+        self.results_table.bind('<Delete>', lambda e: self.delete_selected_results())
+        # Doble click para ver detalle
+        self.results_table.bind('<Double-1>', lambda e: self.show_selected_popup())
         
         # ===== SECCIÓN 5: Barra de estado =====
         self.status_var = tk.StringVar(value=GUIMessages.STATUS_READY)
@@ -293,9 +359,23 @@ class AlgorithmGUI:
         
     def append_output(self, text):
         """Agrega texto al área de salida"""
-        self.output_text.insert(tk.END, text)
-        self.output_text.see(tk.END)
-        self.output_text.update()
+        # Guardar en buffer si está activa la captura
+        try:
+            if self.capture_output:
+                self.current_output.append(text)
+        except Exception:
+            pass
+
+        # Asegurar actualización en el hilo de la GUI
+        def _insert():
+            self.output_text.insert(tk.END, text)
+            self.output_text.see(tk.END)
+            self.output_text.update()
+
+        if threading.current_thread() is threading.main_thread():
+            _insert()
+        else:
+            self.root.after(0, _insert)
         
     def run_algorithm(self):
         """Ejecuta el algoritmo seleccionado"""
@@ -311,127 +391,297 @@ class AlgorithmGUI:
             
         # Limpiar salida anterior
         self.clear_output()
-        
-        # Obtener algoritmo seleccionado
+
+        # Preparar estado y lanzar hilo
+        self.stop_event.clear()
         algo = self.algorithm.get()
-        
-        # Ejecutar el algoritmo correspondiente
-        try:
-            self.status_var.set(GUIMessages.STATUS_RUNNING(GUIMessages.ALGO_NAMES.get(algo, algo.upper())))
-            self.run_btn.config(state='disabled')
-            self.root.update()
-            
-            start_time = time.time()
-            
-            if algo == "voraz":
-                self.run_voraz()
-            elif algo == "brute":
-                self.run_brute()
-            elif algo == "dinamic":
-                self.run_dinamic()
-                
-            elapsed_time = time.time() - start_time
-            
-            self.append_output(f"\n{GUIMessages.SEPARATOR_LONG}\n")
-            self.append_output(GUIMessages.RESULT_TIME(elapsed_time) + "\n")
-            self.append_output(f"{GUIMessages.SEPARATOR_LONG}\n")
-            self.status_var.set(GUIMessages.STATUS_COMPLETED(GUIMessages.ALGO_NAMES.get(algo, algo.upper()), elapsed_time))
-            
-        except Exception as e:
-            error_msg = f"{GUIIcons.ERROR} ERROR: {str(e)}\n\n{traceback.format_exc()}"
-            self.append_output(error_msg)
-            self.status_var.set(GUIMessages.STATUS_ERROR(GUIMessages.ALGO_NAMES.get(algo, algo.upper())))
-            messagebox.showerror(GUIMessages.DIALOG_ERROR_EXECUTION, str(e))
-        finally:
-            self.run_btn.config(state='normal')
+        self.status_var.set(GUIMessages.STATUS_RUNNING(GUIMessages.ALGO_NAMES.get(algo, algo.upper())))
+        self.run_btn.config(state='disabled')
+        self.stop_btn.config(state='normal')
+
+        def worker():
+            try:
+                start_time = time.time()
+                # Iniciar captura
+                self.capture_output = True
+                self.current_output = []
+                if algo == "voraz":
+                    cost, assignment = self.run_voraz()
+                elif algo == "brute":
+                    cost, assignment = self.run_brute()
+                elif algo == "dinamic":
+                    cost, assignment = self.run_dinamic()
+                else:
+                    cost, assignment = 0.0, {}
+                elapsed_time = time.time() - start_time
+                output_str = ''.join(self.current_output)
+
+                # Agregar fila y actualizar estado en el hilo principal
+                self.root.after(0, lambda: (
+                    self.add_result_row(
+                        algorithm=self.get_plain_algo_name(algo),
+                        file=os.path.basename(self.file_path.get()),
+                        cost=cost,
+                        elapsed=elapsed_time,
+                        output=output_str,
+                        assignment=assignment
+                    ),
+                    self.status_var.set(GUIMessages.STATUS_COMPLETED(GUIMessages.ALGO_NAMES.get(algo, algo.upper()), elapsed_time))
+                ))
+            except KeyboardInterrupt:
+                # Cancelación pedida
+                self.root.after(0, lambda: self.append_output("\n[Ejecución cancelada]\n"))
+                self.root.after(0, lambda: self.status_var.set("Ejecución cancelada"))
+            except Exception as e:
+                err = f"ERROR: {e}\n\n{traceback.format_exc()}"
+                self.root.after(0, lambda: self.append_output(err))
+                self.root.after(0, lambda: self.status_var.set(GUIMessages.STATUS_ERROR(GUIMessages.ALGO_NAMES.get(algo, algo.upper()))))
+            finally:
+                self.capture_output = False
+                self.root.after(0, lambda: (
+                    self.run_btn.config(state='normal'),
+                    self.stop_btn.config(state='disabled')
+                ))
+
+        self.worker_thread = threading.Thread(target=worker, daemon=True)
+        self.worker_thread.start()
             
     def run_voraz(self):
         """Ejecuta el algoritmo voraz"""
         if rocV is None:
             raise ImportError("No se pudo importar el algoritmo Voraz (rocV)")
-            
-        self.append_output(f"{GUIMessages.SEPARATOR_LONG}\n")
-        self.append_output(f"{GUIMessages.HEADER_VORAZ}\n")
-        self.append_output(f"{GUIMessages.SEPARATOR_LONG}\n\n")
         
         # Ejecutar algoritmo
         assignments, unsatisfaction = rocV(self.file_path.get())
         
-        # Mostrar resultados
-        self.append_output(f"{GUIMessages.RESULT_ASSIGNMENT}\n")
-        self.append_output(f"{GUIMessages.SEPARATOR_SHORT}\n")
+        # Mostrar resultados en el formato solicitado (sin emojis)
+        # Costo en primera línea y su valor en la siguiente
+        self.append_output(f"{unsatisfaction:.6f}\n")
         
-        for student, courses in sorted(assignments.items()):
-            courses_str = ', '.join(sorted(courses))
-            self.append_output(GUIMessages.RESULT_STUDENT(student, courses_str) + "\n")
-            
-        self.append_output(f"\n{GUIMessages.SEPARATOR_SHORT}\n")
-        self.append_output(GUIMessages.RESULT_SATISFACTION(unsatisfaction) + "\n")
+        # Por cada estudiante: "ei,ai" y luego las materias asignadas una por línea
+        for student in sorted(assignments.keys()):
+            courses = sorted(list(assignments[student]))
+            self.append_output(f"{student},{len(courses)}\n")
+            for course in courses:
+                self.append_output(f"{course}\n")
+        # Preparar asignación ordenada
+        assignment_out = {s: sorted(list(courses)) for s, courses in assignments.items()}
+        return float(unsatisfaction), assignment_out
         
     def run_brute(self):
         """Ejecuta el algoritmo de fuerza bruta"""
         if construir_arbol is None or calc_insatisfaccion_brute is None:
             raise ImportError("No se pudo importar el algoritmo Brute Force")
-            
-        self.append_output(f"{GUIMessages.SEPARATOR_LONG}\n")
-        self.append_output(f"{GUIMessages.HEADER_BRUTE}\n")
-        self.append_output(f"{GUIMessages.SEPARATOR_LONG}\n\n")
         
         # Parsear entrada
         course_index_by_code, capacities, requests_by_student = parse_input_file(self.file_path.get())
         
-        self.append_output(GUIMessages.PROCESS_BRUTE)
-        
         # Ejecutar algoritmo
-        solucion_optima = construir_arbol(requests_by_student, requests_by_student, capacities)
+        # Pasar evento de cancelación
+        try:
+            solucion_optima = construir_arbol(requests_by_student, requests_by_student, capacities, stop_event=self.stop_event)
+        except KeyboardInterrupt:
+            # Si se canceló, no hay resultados
+            return 0.0, {}
         insatisfaccion = calc_insatisfaccion_brute(solucion_optima, requests_by_student)
         
-        # Mostrar resultados
-        self.append_output(f"{GUIMessages.RESULT_ASSIGNMENT}\n")
-        self.append_output(f"{GUIMessages.SEPARATOR_SHORT}\n")
+        # Mostrar resultados en formato solicitado
+        self.append_output("Costo\n")
+        self.append_output(f"{insatisfaccion:.6f}\n")
         
         # Invertir el mapeo de índices a códigos
         course_code_by_index = {idx: code for code, idx in course_index_by_code.items()}
         
+        assignment_out = {}
         for estudiante, materias_asignadas in sorted(solucion_optima.items()):
             # Convertir índices a códigos de materia
             codigos_materias = []
             for materia_idx in materias_asignadas:
                 codigo = course_code_by_index.get(materia_idx, str(materia_idx))
                 codigos_materias.append(codigo)
-            courses_str = ', '.join(sorted(codigos_materias))
-            self.append_output(GUIMessages.RESULT_STUDENT(estudiante, courses_str) + "\n")
-            
-        self.append_output(f"\n{GUIMessages.SEPARATOR_SHORT}\n")
-        self.append_output(GUIMessages.RESULT_SATISFACTION(insatisfaccion) + "\n")
+            codigos_materias_sorted = sorted(codigos_materias)
+            assignment_out[estudiante] = codigos_materias_sorted
+            self.append_output(f"{estudiante},{len(codigos_materias_sorted)}\n")
+            for code in codigos_materias_sorted:
+                self.append_output(f"{code}\n")
+        return float(insatisfaccion), assignment_out
         
     def run_dinamic(self):
         """Ejecuta el algoritmo de programación dinámica"""
         if rocPD is None:
             raise ImportError(GUIMessages.ERROR_DYNAMIC_UNAVAILABLE)
-            
-        self.append_output(f"{GUIMessages.SEPARATOR_LONG}\n")
-        self.append_output(f"{GUIMessages.HEADER_DYNAMIC}\n")
-        self.append_output(f"{GUIMessages.SEPARATOR_LONG}\n\n")
         
         # Parsear entrada
         course_index_by_code, capacities, requests_by_student = parse_input_file(self.file_path.get())
         
-        self.append_output(GUIMessages.PROCESS_DYNAMIC)
-        
         # Ejecutar algoritmo
         assignment, average_dissatisfaction = rocPD(course_index_by_code, capacities, requests_by_student)
         
-        # Mostrar resultados
-        self.append_output(f"{GUIMessages.RESULT_ASSIGNMENT}\n")
-        self.append_output(f"{GUIMessages.SEPARATOR_SHORT}\n")
+        # Mostrar resultados en formato solicitado
+        self.append_output("Costo\n")
+        self.append_output(f"{average_dissatisfaction:.6f}\n")
         
-        for student, courses in sorted(assignment.items()):
-            courses_str = ', '.join(sorted(courses))
-            self.append_output(GUIMessages.RESULT_STUDENT(student, courses_str) + "\n")
-            
-        self.append_output(f"\n{GUIMessages.SEPARATOR_SHORT}\n")
-        self.append_output(GUIMessages.RESULT_SATISFACTION(average_dissatisfaction) + "\n")
+        assignment_out = {}
+        for student in sorted(assignment.keys()):
+            courses = sorted(list(assignment[student]))
+            assignment_out[student] = courses
+            self.append_output(f"{student},{len(courses)}\n")
+            for course in courses:
+                self.append_output(f"{course}\n")
+        return float(average_dissatisfaction), assignment_out
+
+    def stop_execution(self):
+        """Solicita la cancelación de la ejecución actual."""
+        self.stop_event.set()
+
+    # ===== Utilidades de resultados =====
+    def get_plain_algo_name(self, algo_key: str) -> str:
+        mapping = {
+            'voraz': 'VORAZ',
+            'brute': 'BRUTE FORCE',
+            'dinamic': 'DINÁMICA',
+        }
+        return mapping.get(algo_key, algo_key.upper())
+
+    def add_result_row(self, algorithm: str, file: str, cost: float, elapsed: float, output: str, assignment: dict):
+        row_id = self.next_result_id
+        self.next_result_id += 1
+        row = {
+            'id': row_id,
+            'algorithm': algorithm,
+            'file': file,
+            'cost': float(cost),
+            'time': float(elapsed),
+            'output': output,
+            'assignment': assignment,
+        }
+        self.results.append(row)
+        self.results_table.insert('', tk.END, iid=str(row_id), values=(
+            algorithm,
+            file,
+            f"{cost:.6f}",
+            f"{elapsed:.4f}"
+        ))
+
+    def clear_results_table(self):
+        for item in self.results_table.get_children():
+            self.results_table.delete(item)
+        self.results.clear()
+
+    def save_results_csv(self):
+        if not self.results:
+            messagebox.showinfo("Guardar CSV", "No hay resultados para guardar.")
+            return
+        file_path = filedialog.asksaveasfilename(
+            defaultextension='.csv',
+            filetypes=[('CSV', '*.csv')],
+            title='Guardar resultados como'
+        )
+        if not file_path:
+            return
+        try:
+            with open(file_path, 'w', newline='', encoding='utf-8') as f:
+                fieldnames = ['algorithm', 'file', 'cost', 'time', 'assignment', 'output']
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                for r in self.results:
+                    writer.writerow({
+                        'algorithm': r.get('algorithm'),
+                        'file': r.get('file'),
+                        'cost': r.get('cost'),
+                        'time': r.get('time'),
+                        'assignment': json.dumps(r.get('assignment', {}), ensure_ascii=False),
+                        'output': r.get('output', ''),
+                    })
+            messagebox.showinfo("Guardar CSV", f"Resultados guardados en {os.path.basename(file_path)}")
+        except Exception as e:
+            messagebox.showerror("Guardar CSV", f"No se pudo guardar el archivo.\n{e}")
+
+    def delete_selected_results(self):
+        """Elimina las filas seleccionadas de la tabla y del arreglo interno."""
+        selected = self.results_table.selection()
+        if not selected:
+            return
+        # Convertir a ints los iids seleccionados
+        ids = set(int(iid) for iid in selected)
+        # Filtrar resultados conservando el orden
+        self.results = [row for row in self.results if row.get('id') not in ids]
+        # Eliminar de la tabla
+        for iid in selected:
+            self.results_table.delete(iid)
+
+    def on_table_select(self, event=None):
+        """Muestra en el panel de salida el resultado textual guardado para la fila seleccionada."""
+        selection = self.results_table.selection()
+        if not selection:
+            return
+        # Solo tomar el primero si hay múltiples
+        iid = int(selection[0])
+        row = next((r for r in self.results if r.get('id') == iid), None)
+        if not row:
+            return
+        # Mostrar salida guardada
+        self.clear_output()
+        output = row.get('output', '')
+        # Insertar de golpe para eficiencia
+        self.output_text.insert(tk.END, output)
+        self.output_text.see(tk.END)
+
+    def show_selected_popup(self):
+        """Abre un popup con el detalle (salida y asignación) de la fila seleccionada."""
+        selection = self.results_table.selection()
+        if not selection:
+            messagebox.showinfo("Detalle", "Selecciona una fila para ver su detalle.")
+            return
+        iid = int(selection[0])
+        row = next((r for r in self.results if r.get('id') == iid), None)
+        if not row:
+            return
+
+        win = tk.Toplevel(self.root)
+        win.title(f"Detalle - {row.get('algorithm')} ({row.get('file')})")
+        win.geometry("700x500")
+        win.transient(self.root)
+        # Asegurar que la ventana sea visible antes de aplicar el grab
+        def _try_grab():
+            try:
+                win.grab_set()
+            except tk.TclError:
+                # Reintentar poco después hasta que sea visible
+                win.after(20, _try_grab)
+        win.after(0, _try_grab)
+        win.lift()
+        win.focus_set()
+
+        nb = ttk.Notebook(win)
+        nb.pack(fill=tk.BOTH, expand=True)
+
+        # Tab: Salida
+        frame_out = ttk.Frame(nb)
+        nb.add(frame_out, text="Salida")
+        txt_out = scrolledtext.ScrolledText(frame_out, wrap=tk.WORD, font=GUIStyles.FONTS['mono'])
+        txt_out.pack(fill=tk.BOTH, expand=True)
+        txt_out.insert(tk.END, row.get('output', ''))
+        txt_out.configure(state='disabled')
+
+        # Tab: Asignación (JSON)
+        frame_json = ttk.Frame(nb)
+        nb.add(frame_json, text="Asignación (JSON)")
+        txt_json = scrolledtext.ScrolledText(frame_json, wrap=tk.WORD, font=GUIStyles.FONTS['mono'])
+        txt_json.pack(fill=tk.BOTH, expand=True)
+        try:
+            json_text = json.dumps(row.get('assignment', {}), indent=2, ensure_ascii=False)
+        except Exception:
+            json_text = str(row.get('assignment', {}))
+        txt_json.insert(tk.END, json_text)
+        txt_json.configure(state='disabled')
+
+        # Pie con datos clave
+        footer = ttk.Frame(win)
+        footer.pack(fill=tk.X, padx=10, pady=8)
+        ttk.Label(footer, text=f"Algoritmo: {row.get('algorithm')}").pack(side=tk.LEFT, padx=5)
+        ttk.Label(footer, text=f"Costo: {row.get('cost'):.6f}").pack(side=tk.LEFT, padx=5)
+        ttk.Label(footer, text=f"Tiempo: {row.get('time'):.4f}s").pack(side=tk.LEFT, padx=5)
 
 
 def main():
