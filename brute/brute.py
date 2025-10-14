@@ -99,7 +99,7 @@ def validar_cupos(solucion_completa, capacities):
         return all(count <= capacities[idx] for idx, count in enumerate(conteo_materias))
 
 # --- Construcción del árbol ---
-def construir_arbol(estudiantes_dict, estudiantes, materias):
+def construir_arbol(estudiantes_dict, estudiantes, materias, stop_event=None):
     """
     estudiantes_dict: dict {estudiante: [(materia, prioridad), ...]}
     """
@@ -107,6 +107,9 @@ def construir_arbol(estudiantes_dict, estudiantes, materias):
     lista_estudiantes = list(estudiantes_dict.keys())
     
     def expandir(idx, solucion_actual, estudiantes, materias):
+        # Cancelación cooperativa
+        if stop_event is not None and getattr(stop_event, 'is_set', None) and stop_event.is_set():
+            raise KeyboardInterrupt()
         global mejor_solucion, mejor_insatisfaccion
         
         # Caso base: hemos asignado materias a todos los estudiantes
