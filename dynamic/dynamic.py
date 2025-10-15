@@ -35,16 +35,30 @@ def dynamic(capacities, requests_by_student, stop_event=None):
     students = list(requests_immutable.keys())
     initial_caps = tuple(capacities)
 
-    # Diccionario para guardar las decisiones óptimas
+    # Diccionario para guardar las decisiones óptimas por estado (i, caps)
     choice = {}
+
+    # Mejor total conocido desde el estado raíz (i=0, caps iniciales)
+    root_best_total = [float("inf")]  # lista para mutabilidad en cierre
+
+    def baseline_from(i: int) -> float:
+        """Costo total si desde el estudiante i no se asigna ninguna materia (subconjunto vacío)."""
+        total = 0.0
+        for j in range(i, len(students)):
+            opciones_j = requests_immutable[students[j]]
+            total += calcular_insatisfaccion((), opciones_j)
+        return total
+
+    # inicializar mejor parcial como baseline desde la raíz
+    root_best_total[0] = baseline_from(0)
 
     @lru_cache(maxsize=None)
     def dp(i, caps):
-        # Revisión cooperativa de cancelación
+        # Cancelación cooperativa: devuelve mejor total conocido
         if stop_event is not None and getattr(stop_event, 'is_set', None) and stop_event.is_set():
-            raise KeyboardInterrupt()
+            return root_best_total[0]
         if i == len(students):
-            return 0.0  # cuando se completen todos los estudiantes se le suma 0 dado que ya no hay insatisfacción para este caso
+            return 0.0
 
         student = students[i]
         opciones = requests_immutable[student]
@@ -52,9 +66,9 @@ def dynamic(capacities, requests_by_student, stop_event=None):
         best_subset = ()
 
         for subset in generar_subconjuntos(opciones):
-            # Revisión periódica de cancelación durante la iteración
+            # Cancelación durante iteración
             if stop_event is not None and getattr(stop_event, 'is_set', None) and stop_event.is_set():
-                raise KeyboardInterrupt()
+                return root_best_total[0]
             # verifica si hay cupos en las materias
             new_caps = list(caps)
             feasible = True
@@ -72,23 +86,29 @@ def dynamic(capacities, requests_by_student, stop_event=None):
             if total < best:
                 best = total
                 best_subset = subset
+                # Guardar mejor hasta ahora para este estado
+                choice[(i, caps)] = best_subset
+                # Si estamos en el estado raíz, actualizar el mejor total conocido
+                if i == 0 and total < root_best_total[0]:
+                    root_best_total[0] = total
 
         # Guardar la mejor decisión para este estado
         choice[(i, caps)] = best_subset
         return best
 
-    # Suma total de insatisfacciones individuales
+    # Ejecutar DP desde el estado inicial
     best_total = dp(0, initial_caps)
 
+    # Reconstrucción de asignaciones a partir de las mejores decisiones
     asignaciones = {}
     caps = list(initial_caps)
     for i, student in enumerate(students):
-        if stop_event is not None and getattr(stop_event, 'is_set', None) and stop_event.is_set():
-            raise KeyboardInterrupt()
+        # Durante cancelación, usamos la mejor decisión conocida o vacío
         subset = choice.get((i, tuple(caps)), ())
         asignaciones[student] = [c for (c, _) in subset]
         for (c, _) in subset:
             caps[c] -= 1
+
     # Devolver insatisfacción promedio (consistente con voraz y brute)
     num_students = len(students)
     average = best_total / num_students if num_students > 0 else 0.0

@@ -282,7 +282,7 @@ class AlgorithmGUI:
         table_label.grid(row=0, column=0, sticky=tk.W, pady=(0, 6))
 
         # Treeview para resultados
-        columns = ("algoritmo", "archivo", "costo", "tiempo", "mem_actual", "mem_pico")
+        columns = ("algoritmo", "archivo", "costo", "tiempo", "mem_actual", "mem_pico", "parcial")
         self.results_table = ttk.Treeview(right_panel, columns=columns, show='headings', height=10)
         self.results_table.heading("algoritmo", text="Algoritmo")
         self.results_table.heading("archivo", text="Archivo")
@@ -290,12 +290,14 @@ class AlgorithmGUI:
         self.results_table.heading("tiempo", text="Tiempo (s)")
         self.results_table.heading("mem_actual", text="Mem Actual (MB)")
         self.results_table.heading("mem_pico", text="Mem Pico (MB)")
+        self.results_table.heading("parcial", text="Parcial")
         self.results_table.column("algoritmo", width=120, anchor=tk.W)
         self.results_table.column("archivo", width=140, anchor=tk.W)
         self.results_table.column("costo", width=110, anchor=tk.E)
         self.results_table.column("tiempo", width=90, anchor=tk.E)
         self.results_table.column("mem_actual", width=120, anchor=tk.E)
         self.results_table.column("mem_pico", width=110, anchor=tk.E)
+        self.results_table.column("parcial", width=70, anchor=tk.CENTER)
         self.results_table.grid(row=1, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
         # Scrollbar vertical para la tabla
@@ -420,6 +422,7 @@ class AlgorithmGUI:
                     metrics = {"tiempo_s": 0.0, "memoria_actual_MB": 0.0, "memoria_pico_MB": 0.0, "resultado": (0.0, {})}
 
                 cost, assignment = metrics["resultado"]
+                partial_flag = bool(self.stop_event.is_set())
                 elapsed_time = metrics["tiempo_s"]
                 mem_current = metrics["memoria_actual_MB"]
                 mem_peak = metrics["memoria_pico_MB"]
@@ -435,7 +438,8 @@ class AlgorithmGUI:
                         mem_current=mem_current,
                         mem_peak=mem_peak,
                         output=output_str,
-                        assignment=assignment
+                        assignment=assignment,
+                        partial=partial_flag
                     ),
                     self.status_var.set(GUIMessages.STATUS_COMPLETED(GUIMessages.ALGO_NAMES.get(algo, algo.upper()), elapsed_time))
                 ))
@@ -568,7 +572,7 @@ class AlgorithmGUI:
         }
         return mapping.get(algo_key, algo_key.upper())
 
-    def add_result_row(self, algorithm: str, file: str, cost: float, elapsed: float, mem_current: float, mem_peak: float, output: str, assignment: dict):
+    def add_result_row(self, algorithm: str, file: str, cost: float, elapsed: float, mem_current: float, mem_peak: float, output: str, assignment: dict, partial: bool=False):
         row_id = self.next_result_id
         self.next_result_id += 1
         row = {
@@ -581,6 +585,7 @@ class AlgorithmGUI:
             'mem_peak': float(mem_peak),
             'output': output,
             'assignment': assignment,
+            'partial': bool(partial),
         }
         self.results.append(row)
         self.results_table.insert('', tk.END, iid=str(row_id), values=(
@@ -589,7 +594,8 @@ class AlgorithmGUI:
             f"{cost:.6f}",
             f"{elapsed:.4f}",
             f"{mem_current:.3f}",
-            f"{mem_peak:.3f}"
+            f"{mem_peak:.3f}",
+            ("Sí" if partial else "No")
         ))
 
     def clear_results_table(self):
@@ -610,7 +616,7 @@ class AlgorithmGUI:
             return
         try:
             with open(file_path, 'w', newline='', encoding='utf-8') as f:
-                fieldnames = ['algorithm', 'file', 'cost', 'time', 'mem_current', 'mem_peak', 'assignment', 'output']
+                fieldnames = ['algorithm', 'file', 'cost', 'time', 'mem_current', 'mem_peak', 'partial', 'assignment', 'output']
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
                 for r in self.results:
@@ -621,6 +627,7 @@ class AlgorithmGUI:
                         'time': r.get('time'),
                         'mem_current': r.get('mem_current'),
                         'mem_peak': r.get('mem_peak'),
+                        'partial': r.get('partial', False),
                         'assignment': json.dumps(r.get('assignment', {}), ensure_ascii=False),
                         'output': r.get('output', ''),
                     })
