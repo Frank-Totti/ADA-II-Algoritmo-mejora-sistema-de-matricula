@@ -136,35 +136,27 @@ class GUIStyles:
 
 
 class GUIIcons:
-    """Clase que contiene los emojis/iconos usados en la GUI"""
-    
-    # Iconos generales
-    TITLE = "🎓"
-    FILE = "📁"
-    SETTINGS = "⚙️"
-    OUTPUT = "📊"
-    FOLDER = "📂"
-    TRASH = "🗑️"
-    PLAY = "▶️"
-    
-    # Algoritmos
-    VORAZ = "🚀"
-    BRUTE = "💪"
-    DYNAMIC = "🧮"
-    
-    # Estados
-    SUCCESS = "✅"
-    ERROR = "❌"
-    LOADING = "⏳"
-    CLOCK = "⏱️"
-    CLEAN = "🧹"
-    DOCUMENT = "📄"
-    
-    # Resultados
-    LIST = "📋"
-    USER = "👤"
-    CHART = "📊"
-    REFRESH = "🔄"
+    """Iconos deshabilitados (sin emojis). Se mantienen constantes vacías para compatibilidad."""
+    TITLE = ""
+    FILE = ""
+    SETTINGS = ""
+    OUTPUT = ""
+    FOLDER = ""
+    TRASH = ""
+    PLAY = ""
+    VORAZ = ""
+    BRUTE = ""
+    DYNAMIC = ""
+    SUCCESS = ""
+    ERROR = ""
+    LOADING = ""
+    CLOCK = ""
+    CLEAN = ""
+    DOCUMENT = ""
+    LIST = ""
+    USER = ""
+    CHART = ""
+    REFRESH = ""
 
 
 class GUIMessages:
@@ -172,37 +164,37 @@ class GUIMessages:
     
     # Títulos
     WINDOW_TITLE = "Sistema de Asignación de Cupos - Comparador de Algoritmos"
-    APP_TITLE = f"{GUIIcons.TITLE} Sistema de Asignación de Cupos"
+    APP_TITLE = f"Sistema de Asignación de Cupos"
     
     # Secciones
-    SECTION_FILE = f" {GUIIcons.FILE} Archivo de Entrada "
-    SECTION_ALGORITHM = f" {GUIIcons.SETTINGS} Algoritmo "
-    SECTION_OUTPUT = f" {GUIIcons.OUTPUT} Salida del Algoritmo "
+    SECTION_FILE = "Archivo de Entrada"
+    SECTION_ALGORITHM = "Algoritmo"
+    SECTION_OUTPUT = "Salida del Algoritmo"
     
     # Botones
-    BTN_BROWSE = f"{GUIIcons.FOLDER} Buscar..."
-    BTN_RUN = f"{GUIIcons.PLAY} Ejecutar Algoritmo"
-    BTN_CLEAR = f"{GUIIcons.TRASH} Limpiar"
+    BTN_BROWSE = "Buscar..."
+    BTN_RUN = "Ejecutar Algoritmo"
+    BTN_CLEAR = "Limpiar"
     
     # Algoritmos
-    ALGO_VORAZ = f"{GUIIcons.VORAZ} Voraz (Greedy)"
-    ALGO_BRUTE = f"{GUIIcons.BRUTE} Fuerza Bruta (Brute Force)"
-    ALGO_DYNAMIC = f"{GUIIcons.DYNAMIC} Programación Dinámica (Dynamic)"
+    ALGO_VORAZ = "Voraz (Greedy)"
+    ALGO_BRUTE = "Fuerza Bruta (Brute Force)"
+    ALGO_DYNAMIC = "Programación Dinámica (Dynamic)"
     ALGO_UNAVAILABLE = "(No disponible)"
     
     # Estados
-    STATUS_READY = f"{GUIIcons.SUCCESS} Listo para comenzar"
-    STATUS_FILE_SELECTED = lambda filename: f"{GUIIcons.DOCUMENT} Archivo seleccionado: {filename}"
-    STATUS_CLEANED = f"{GUIIcons.CLEAN} Salida limpiada - Listo para ejecutar"
-    STATUS_RUNNING = lambda algo_name: f"{GUIIcons.LOADING} Ejecutando {algo_name}..."
-    STATUS_COMPLETED = lambda algo_name, time: f"{GUIIcons.SUCCESS} {algo_name} completado en {time:.4f}s"
-    STATUS_ERROR = lambda algo_name: f"{GUIIcons.ERROR} Error al ejecutar {algo_name}"
+    STATUS_READY = "Listo para comenzar"
+    STATUS_FILE_SELECTED = lambda filename: f"Archivo seleccionado: {filename}"
+    STATUS_CLEANED = "Salida limpiada - Listo para ejecutar"
+    STATUS_RUNNING = lambda algo_name: f"Ejecutando {algo_name}..."
+    STATUS_COMPLETED = lambda algo_name, time: f"{algo_name} completado en {time:.4f}s"
+    STATUS_ERROR = lambda algo_name: f"Error al ejecutar {algo_name}"
     
     # Nombres de algoritmos para mensajes
     ALGO_NAMES = {
-        'voraz': f'{GUIIcons.VORAZ} VORAZ',
-        'brute': f'{GUIIcons.BRUTE} FUERZA BRUTA',
-        'dynamic': f'{GUIIcons.DYNAMIC} PROGRAMACIÓN DINÁMICA'
+        'voraz': 'VORAZ',
+        'brute': 'FUERZA BRUTA',
+        'dynamic': 'PROGRAMACIÓN DINÁMICA'
     }
     
     # Errores
@@ -211,33 +203,33 @@ class GUIMessages:
     
     # Diálogos
     DIALOG_TITLE_SELECT = "Seleccionar archivo de entrada"
-    DIALOG_ERROR_TITLE = f"{GUIIcons.ERROR} Error"
-    DIALOG_ERROR_EXECUTION = f"{GUIIcons.ERROR} Error de Ejecución"
+    DIALOG_ERROR_TITLE = "Error"
+    DIALOG_ERROR_EXECUTION = "Error de Ejecución"
     
     # Separadores
     SEPARATOR_LONG = "="*70
     SEPARATOR_SHORT = "-"*70
     
     # Resultados
-    RESULT_ASSIGNMENT = f"{GUIIcons.LIST} Asignación Óptima:"
-    RESULT_STUDENT = lambda student, courses: f"  {GUIIcons.USER} {student}: [{courses}]"
-    RESULT_SATISFACTION = lambda value: f"{GUIIcons.CHART} Insatisfacción F⟨M,E⟩(A) = {value:.6f}"
-    RESULT_TIME = lambda time: f"{GUIIcons.CLOCK}  Tiempo de ejecución: {time:.4f} segundos"
+    RESULT_ASSIGNMENT = "Asignación Óptima:"
+    RESULT_STUDENT = lambda student, courses: f"  {student}: [{courses}]"
+    RESULT_SATISFACTION = lambda value: f"Insatisfacción F⟨M,E⟩(A) = {value:.6f}"
+    RESULT_TIME = lambda time: f"Tiempo de ejecución: {time:.4f} segundos"
     
     # Headers de algoritmos
-    HEADER_VORAZ = f"{GUIIcons.VORAZ} ALGORITMO VORAZ (GREEDY) - Estrategia VDC"
-    HEADER_BRUTE = f"{GUIIcons.BRUTE} ALGORITMO FUERZA BRUTA (BRUTE FORCE)"
-    HEADER_DYNAMIC = f"{GUIIcons.DYNAMIC} ALGORITMO PROGRAMACIÓN DINÁMICA (DYNAMIC PROGRAMMING)"
+    HEADER_VORAZ = "ALGORITMO VORAZ (GREEDY) - Estrategia VDC"
+    HEADER_BRUTE = "ALGORITMO FUERZA BRUTA (BRUTE FORCE)"
+    HEADER_DYNAMIC = "ALGORITMO PROGRAMACIÓN DINÁMICA (DYNAMIC PROGRAMMING)"
     
     # Mensajes de proceso
-    PROCESS_BRUTE = "⚙️  Procesando todas las combinaciones posibles...\n\n"
-    PROCESS_DYNAMIC = f"{GUIIcons.REFRESH} Resolviendo con memoización...\n\n"
+    PROCESS_BRUTE = "Procesando todas las combinaciones posibles...\n\n"
+    PROCESS_DYNAMIC = "Resolviendo con memoización...\n\n"
     
     # Error de algoritmo no disponible
     ERROR_DYNAMIC_UNAVAILABLE = (
-        f"{GUIIcons.ERROR} El algoritmo de Programación Dinámica no está disponible.\n\n"
-        f"📝 Posibles soluciones:\n"
-    "1. Implementa el algoritmo en: dynamic/dynamic.py\n"
+        "El algoritmo de Programación Dinámica no está disponible.\n\n"
+        "Posibles soluciones:\n"
+        "1. Implementa el algoritmo en: dynamic/dynamic.py\n"
         "2. O copia la implementación desde otro módulo\n"
-    "3. Asegúrate de exportar la función 'rocDP'"
+        "3. Asegúrate de exportar la función 'rocDP'"
     )
