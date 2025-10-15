@@ -1,3 +1,23 @@
+def rocBrute(course_index_by_code, capacities, requests_by_student, stop_event=None):
+    """
+    Wrapper para el algoritmo de fuerza bruta.
+    Convierte las asignaciones de índices a códigos de materia.
+    Args:
+        course_index_by_code: Diccionario que mapea códigos de materias a índices
+        capacities: Lista de capacidades por materia (índice)
+        requests_by_student: Diccionario de solicitudes por estudiante
+        stop_event: threading.Event para cancelación cooperativa (opcional)
+    Returns:
+        tuple: (asignaciones_con_codigos, insatisfaccion_promedio)
+    """
+    solucion_optima = construir_arbol(requests_by_student, requests_by_student, capacities, stop_event=stop_event)
+    promedio = calcular_insatisfaccion(solucion_optima, requests_by_student)
+    course_code_by_index = {idx: code for code, idx in course_index_by_code.items()}
+    asignaciones_con_codigos = {}
+    for student, materias_idx in solucion_optima.items():
+        codigos = [course_code_by_index.get(idx, str(idx)) for idx in materias_idx]
+        asignaciones_con_codigos[student] = codigos
+    return asignaciones_con_codigos, promedio
 # Logíca de la solución por fuerza bruta
 import itertools
 
@@ -99,14 +119,22 @@ def validar_cupos(solucion_completa, capacities):
         return all(count <= capacities[idx] for idx, count in enumerate(conteo_materias))
 
 # --- Construcción del árbol ---
-def construir_arbol(estudiantes_dict, estudiantes, materias):
+def construir_arbol(estudiantes_dict, estudiantes, materias, stop_event=None):
     """
     estudiantes_dict: dict {estudiante: [(materia, prioridad), ...]}
     """
     global mejor_solucion, mejor_insatisfaccion
     lista_estudiantes = list(estudiantes_dict.keys())
-    
+    cancelado = False  # flag local para cortar búsqueda sin excepciones
+
     def expandir(idx, solucion_actual, estudiantes, materias):
+        nonlocal cancelado
+        # Cancelación cooperativa
+        if stop_event is not None and getattr(stop_event, 'is_set', None) and stop_event.is_set():
+            cancelado = True
+            return
+        if cancelado:
+            return
         global mejor_solucion, mejor_insatisfaccion
         
         # Caso base: hemos asignado materias a todos los estudiantes
@@ -124,15 +152,20 @@ def construir_arbol(estudiantes_dict, estudiantes, materias):
         
         # Probar todos los subconjuntos posibles para este estudiante
         for subconjunto in subconjuntos(materias_estudiante):
+            if cancelado:
+                return
             materias_asignadas = [materia for materia, prioridad in subconjunto]
             solucion_actual[estudiante] = materias_asignadas
             
             # Continuar con el siguiente estudiante
             expandir(idx + 1, solucion_actual, estudiantes, materias)
+            if cancelado:
+                return
     
     # Inicializar y comenzar la búsqueda
-    mejor_solucion = {}
-    mejor_insatisfaccion = float('inf')
+    # Baseline: solución factible con cero asignaciones para todos los estudiantes
+    mejor_solucion = {est: [] for est in lista_estudiantes}
+    mejor_insatisfaccion = calcular_insatisfaccion(mejor_solucion, estudiantes)
 
     expandir(0, {}, estudiantes, materias)
     return mejor_solucion
