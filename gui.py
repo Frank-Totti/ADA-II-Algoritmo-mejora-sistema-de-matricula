@@ -61,19 +61,16 @@ except Exception as e:
     rocGreedy = None
 
 # Importar brute de manera similar
-construir_arbol = None
-calc_insatisfaccion_brute = None
+rocBrute = None
 try:
     brute_path = os.path.join(current_dir, 'brute', 'brute.py')
     spec = importlib.util.spec_from_file_location("brute_module", brute_path)
     brute_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(brute_module)
-    construir_arbol = brute_module.construir_arbol
-    calc_insatisfaccion_brute = brute_module.calcular_insatisfaccion
+    rocBrute = brute_module.rocBrute
 except Exception as e:
     print(f"Error importando brute: {e}")
-    construir_arbol = None
-    calc_insatisfaccion_brute = None
+    rocBrute = None
 
 # Importar programación dinámica de manera similar a los otros algoritmos
 rocDP = None
@@ -503,14 +500,8 @@ class AlgorithmGUI:
         
     def run_brute(self):
         """Ejecuta el algoritmo de fuerza bruta usando el wrapper rocBrute"""
-        try:
-            brute_path = os.path.join(current_dir, 'brute', 'brute.py')
-            spec = importlib.util.spec_from_file_location("brute_module", brute_path)
-            brute_module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(brute_module)
-            rocBrute = brute_module.rocBrute
-        except Exception as e:
-            raise ImportError(f"No se pudo importar rocBrute: {e}")
+        if rocBrute is None:
+            raise ImportError("No se pudo importar el algoritmo de Fuerza Bruta (rocBrute)")
 
         # Parsear entrada
         course_index_by_code, capacities, requests_by_student = parse_input_file(self.file_path.get())

@@ -57,7 +57,7 @@ def dynamic(capacities, requests_by_student, stop_event=None):
         total = 0.0
         for j in range(i, len(students)):
             opciones_j = requests_immutable[students[j]]
-            total += calcular_insatisfaccion((), opciones_j)
+            total += calcular_insatisfaccion_individual((), opciones_j)
         return total
 
     # inicializar mejor parcial como baseline desde la raíz
