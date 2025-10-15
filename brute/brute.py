@@ -1,100 +1,34 @@
-def rocBrute(course_index_by_code, capacities, requests_by_student, stop_event=None):
-    """
-    Wrapper para el algoritmo de fuerza bruta.
-    Convierte las asignaciones de índices a códigos de materia.
-    Args:
-        course_index_by_code: Diccionario que mapea códigos de materias a índices
-        capacities: Lista de capacidades por materia (índice)
-        requests_by_student: Diccionario de solicitudes por estudiante
-        stop_event: threading.Event para cancelación cooperativa (opcional)
-    Returns:
-        tuple: (asignaciones_con_codigos, insatisfaccion_promedio)
-    """
-    solucion_optima = construir_arbol(requests_by_student, requests_by_student, capacities, stop_event=stop_event)
-    promedio = calcular_insatisfaccion(solucion_optima, requests_by_student)
-    course_code_by_index = {idx: code for code, idx in course_index_by_code.items()}
-    asignaciones_con_codigos = {}
-    for student, materias_idx in solucion_optima.items():
-        codigos = [course_code_by_index.get(idx, str(idx)) for idx in materias_idx]
-        asignaciones_con_codigos[student] = codigos
-    return asignaciones_con_codigos, promedio
-# Logíca de la solución por fuerza bruta
-import itertools
+"""
+Algoritmo de Fuerza Bruta para Repartición Óptima de Cupos
+=========================================================
 
-# --- Cálculo de insatisfacción ---
+Proyecto: Análisis y Diseño de Algoritmos II
+Algoritmo: rocBrute - Estrategia de Búsqueda Exhaustiva Completa
+Fecha: 14 de Octubre 2025
 
-def calcular_insatisfaccion(solucion, estudiantes):
-    """
-    Calcula el nivel de insatisfacción de la solución actual.
-    """     
-    valor_insatisfaccion = 0
-    
-    for clave in solucion:  # cada estudiante
-        materias_solicitadas = estudiantes[clave]       # lista de (materia, prioridad)
-        materias_asignadas = solucion[clave]            # lista de materias realmente asignadas
+Descripción:
+    Implementa un algoritmo de fuerza bruta que garantiza encontrar la
+    asignación óptima de cupos de materias a estudiantes mediante
+    exploración exhaustiva de todas las combinaciones posibles.
 
-        # total materias solicitadas
-        total_solicitadas = len(materias_solicitadas)
-        total_asignadas = len(materias_asignadas)
+Estrategia de Fuerza Bruta:
+    - Genera todos los subconjuntos posibles de asignaciones por estudiante
+    - Explora el árbol completo de decisiones mediante backtracking
+    - Valida restricciones de capacidad en cada estado
+    - Calcula insatisfacción para cada solución completa
+    - Mantiene registro de la mejor solución encontrada
+    - Garantiza optimalidad global a costa de complejidad exponencial
+"""
 
-        # prioridades de materias NO asignadas
-        no_asignadas = [p for (m, p) in materias_solicitadas if m not in materias_asignadas]
-        suma_prioridades_no_asignadas = sum(no_asignadas)
 
-        # fórmula de insatisfacción individual
-        fj = (1 - total_asignadas / total_solicitadas) * (suma_prioridades_no_asignadas / funcionGamma(total_solicitadas))
-        
-        valor_insatisfaccion += fj
+from input_output import funcionGamma, calcular_insatisfaccion_general, maximaPrioridadPermitida, restriccionMaximoSumaPrioridades, subconjuntos
 
-    # insatisfacción general
-    insatisfaccion_general = valor_insatisfaccion / len(estudiantes)
-
-    return insatisfaccion_general
-
-# --- Restricciones ---
-def funcionGamma(X):
-    """
-    Función gamma para normalizar la insatisfacción
-    """
-    return 3*X-1
-
-def maximaPrioridadPermitida(prioridades, estudiantes):
-    """ 
-    Verifica si todas las prioridades de los estudiantes están dentro del rango permitido.
-    Si alguna prioridad está fuera del rango, retorna True (restricción violada).
-    """
-    min_prioridad = min(prioridades)
-    max_prioridad = max(prioridades)
-    
-    for estudiante, preferencias in estudiantes.items():
-        for _, prioridad in preferencias:
-            if prioridad < min_prioridad or prioridad > max_prioridad:
-                print(f"Prioridad {prioridad} de {estudiante} está fuera del rango permitido.")
-                return True
-    return False
-
-def restriccionMaximoSumaPrioridades(estudiantes):
-    """ 
-    Verifica si algún estudiante excede la prioridad máxima permitida.
-    Si algún estudiante excede, retorna True (restricción violada).
-    """
-    for estudiante, preferencias in estudiantes.items():
-        suma = sum(prioridad for _, prioridad in preferencias)
-        gamma = funcionGamma(len(preferencias))
-        if suma > gamma:
-            return True
-    return False
-
-# --- Generador de subconjuntos ---
-def subconjuntos(materias):
-    resultado = []
-    for r in range(len(materias) + 1):
-        for combo in itertools.combinations(materias, r):
-            resultado.append(list(combo))
-    return resultado
 
 # --- Definición del nodo del árbol ---
 class Nodo:
+    """
+    Clase que representa un nodo en el árbol de decisiones.
+    """
     def __init__(self, estudiante, materias_asignadas, nivel=0):
         self.estudiante = estudiante
         self.materias_asignadas = materias_asignadas  # subconjunto elegido
@@ -107,8 +41,11 @@ class Nodo:
     def __repr__(self):
         return {self.estudiante: self.materias_asignadas}
 
+
 def validar_cupos(solucion_completa, capacities):
-        """Verifica que no se exceda el cupo de ninguna materia usando índices"""
+        """
+        Verifica que no se exceda el cupo de ninguna materia usando índices
+        """
         conteo_materias = [0] * len(capacities)  # Inicializar contador para cada índice
         
         for estudiante, materias_est in solucion_completa.items():
@@ -118,10 +55,12 @@ def validar_cupos(solucion_completa, capacities):
         # Verificar que no se exceda ningún cupo
         return all(count <= capacities[idx] for idx, count in enumerate(conteo_materias))
 
-# --- Construcción del árbol ---
+
 def construir_arbol(estudiantes_dict, estudiantes, materias, stop_event=None):
     """
-    estudiantes_dict: dict {estudiante: [(materia, prioridad), ...]}
+    Construye el árbol de decisiones y encuentra la solución óptima.
+    Args:
+        estudiantes_dict: dict {estudiante: [(materia, prioridad), ...]}
     """
     global mejor_solucion, mejor_insatisfaccion
     lista_estudiantes = list(estudiantes_dict.keys())
@@ -140,7 +79,7 @@ def construir_arbol(estudiantes_dict, estudiantes, materias, stop_event=None):
         # Caso base: hemos asignado materias a todos los estudiantes
         if idx >= len(lista_estudiantes):
             if validar_cupos(solucion_actual,materias):
-                insatisfaccion = calcular_insatisfaccion(solucion_actual, estudiantes)
+                insatisfaccion = calcular_insatisfaccion_general(solucion_actual, estudiantes)
                 if insatisfaccion < mejor_insatisfaccion:
                     mejor_insatisfaccion = insatisfaccion
                     mejor_solucion = solucion_actual.copy()
@@ -165,65 +104,29 @@ def construir_arbol(estudiantes_dict, estudiantes, materias, stop_event=None):
     # Inicializar y comenzar la búsqueda
     # Baseline: solución factible con cero asignaciones para todos los estudiantes
     mejor_solucion = {est: [] for est in lista_estudiantes}
-    mejor_insatisfaccion = calcular_insatisfaccion(mejor_solucion, estudiantes)
+    mejor_insatisfaccion = calcular_insatisfaccion_general(mejor_solucion, estudiantes)
 
     expandir(0, {}, estudiantes, materias)
     return mejor_solucion
 
 
-
-def main():
-    # --- Datos de entrada ---
-    
-    # Mapeo de códigos de curso a índices
-    COURSE_INDEX_BY_CODE = {
-        '1000': 0,
-        '1001': 1,
-        '1002': 2
-    }
-    
-    # Lista de capacidades por índice de curso
-    CAPACITIES = [5, 4, 3]  # capacidades para cursos 0, 1, 2
-    
-    maximo_materias = 7
-    prioridad = [1,2,3,4,5]
-
-    # Diccionario de solicitudes por estudiante (materia_indice, prioridad)
-    REQUESTS_BY_STUDENT = {
-        "100": [(0, 1)],
-        "101": [(2, 2)],
-        "102": [(1, 1)],
-        "103": [(1, 4), (2, 1)],
-        "104": [(0, 1)],
-        "105": [(2, 2)],
-        "106": [(1, 2)],
-        "107": [(1, 3), (0, 1)],
-        "108": [(1, 1), (0, 4), (2, 1)],
-        "109": [(1, 1), (0, 3)]
-    }
-    
-    if maximaPrioridadPermitida(prioridad, REQUESTS_BY_STUDENT):
-        print(f"Prioridades deben ser entre {min(prioridad)} y {max(prioridad)}.")
-        return
-    
-    if restriccionMaximoSumaPrioridades(REQUESTS_BY_STUDENT):
-        print("Algún estudiante excede la prioridad máxima permitida.")
-        return
-    
-    for estudiante, preferencias in REQUESTS_BY_STUDENT.items():
-        if len(preferencias) > maximo_materias:
-            print(f"El estudiante {estudiante} excede el máximo de materias permitidas ({maximo_materias}).")
-            return
-
-    solucion_optima = construir_arbol(REQUESTS_BY_STUDENT, REQUESTS_BY_STUDENT, CAPACITIES)
-    print(round(calcular_insatisfaccion(solucion_optima, REQUESTS_BY_STUDENT), 5))
-    for estudiante, materias_asignadas in solucion_optima.items():
-        print(f"{estudiante}, {len(materias_asignadas)}")
-        for materia_idx in materias_asignadas:
-            # Convertir el índice de vuelta al código de materia
-            codigo_materia = [code for code, idx in COURSE_INDEX_BY_CODE.items() if idx == materia_idx][0]
-            print(codigo_materia)
-    
-    
-if __name__ == "__main__":
-    main()
+def rocBrute(course_index_by_code, capacities, requests_by_student, stop_event=None):
+    """
+    Wrapper para el algoritmo de fuerza bruta.
+    Convierte las asignaciones de índices a códigos de materia.
+    Args:
+        course_index_by_code: Diccionario que mapea códigos de materias a índices
+        capacities: Lista de capacidades por materia (índice)
+        requests_by_student: Diccionario de solicitudes por estudiante
+        stop_event: threading.Event para cancelación cooperativa (opcional)
+    Returns:
+        tuple: (asignaciones_con_codigos, insatisfaccion_promedio)
+    """
+    solucion_optima = construir_arbol(requests_by_student, requests_by_student, capacities, stop_event=stop_event)
+    promedio = calcular_insatisfaccion_general(solucion_optima, requests_by_student)
+    course_code_by_index = {idx: code for code, idx in course_index_by_code.items()}
+    asignaciones_con_codigos = {}
+    for student, materias_idx in solucion_optima.items():
+        codigos = [course_code_by_index.get(idx, str(idx)) for idx in materias_idx]
+        asignaciones_con_codigos[student] = codigos
+    return asignaciones_con_codigos, promedio

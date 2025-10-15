@@ -1,34 +1,45 @@
+"""
+Algoritmo de Programación Dinámica para Repartición Óptima de Cupos
+==================================================================
+
+Proyecto: Análisis y Diseño de Algoritmos II
+Algoritmo: rocDP - Estrategia de Memoización con Subestructura Óptima
+Fecha: 14 de Octubre 2025
+
+Descripción:
+    Implementa un algoritmo de programación dinámica que minimiza la
+    insatisfacción promedio en la asignación de cupos de materias a
+    estudiantes mediante exploración exhaustiva optimizada con memoización.
+
+Estrategia de Programación Dinámica:
+    - Explora todas las combinaciones posibles de asignaciones
+    - Utiliza memoización (LRU cache) para evitar recalcular estados
+    - Mantiene tabla de decisiones óptimas por estado
+    - Construye solución óptima mediante backtracking
+    - Garantiza la solución de mínima insatisfacción global
+    - Complejidad optimizada mediante subestructura óptima
+"""
+
 from functools import lru_cache # permite guardar en cache la información del estado de cada recursión que se haga
-import itertools # para realizar todas las posibles combinaciones
+from input_output import generar_subconjuntos, calcular_insatisfaccion_individual
 
-def gamma(x: int) -> int:
-    return 3 * x - 1
-
-# Cálculo de insatisfacción 
-
-def calcular_insatisfaccion(asignadas, opciones_totales):
-
-    k = len(opciones_totales)
-    if k == 0:
-        return 0.0 # Retorna 0 porque al no haber materias por asignar la insatisfacción es nula.
-    assigned_count = len(asignadas)
-    assigned_courses = {c for (c, _) in asignadas}
-    unassigned_sum = sum(p for (c, p) in opciones_totales if c not in assigned_courses) # Se suman las proridades de las materias que no les asignaron 
-    return (1 - assigned_count / k) * (unassigned_sum / gamma(k)) # Formula del enunciado
-
-
-# Generar todos los subconjuntos válidos
-
-def generar_subconjuntos(opciones):
-    """Genera todos los subconjuntos posibles de materias solicitadas por un estudiante."""
-    n = len(opciones)
-    for r in range(n + 1):
-        for comb in itertools.combinations(opciones, r):
-            yield comb
-
-#   Programa principal
 
 def dynamic(capacities, requests_by_student, stop_event=None):
+    """
+    Algoritmo de programación dinámica con memoización para asignación óptima de cupos.
+    Explora exhaustivamente todas las combinaciones posibles de asignaciones y utiliza
+    LRU cache para evitar recalcular estados ya visitados.
+    
+    Args:
+        capacities: Lista de capacidades disponibles por materia (índice)
+        requests_by_student: Diccionario de solicitudes por estudiante {estudiante: [(materia_idx, prioridad), ...]}
+        stop_event: threading.Event para cancelación cooperativa durante la ejecución (opcional)
+    
+    Returns:
+        tuple: (asignaciones, insatisfaccion_promedio)
+            - asignaciones: dict {estudiante: [lista de índices de materias asignadas]}
+            - insatisfaccion_promedio: float con la insatisfacción promedio de la solución óptima
+    """
 
     # Hacemos inmutables las solicitudes (para memoización)
     requests_immutable = {s: tuple(reqs) for s, reqs in requests_by_student.items()}
@@ -66,7 +77,7 @@ def dynamic(capacities, requests_by_student, stop_event=None):
             if not feasible:
                 continue
 
-            f_j = calcular_insatisfaccion(subset, opciones)
+            f_j = calcular_insatisfaccion_individual(subset, opciones)
             total = f_j + dp(i + 1, tuple(new_caps))
 
             if total < best:
@@ -93,6 +104,7 @@ def dynamic(capacities, requests_by_student, stop_event=None):
     num_students = len(students)
     average = best_total / num_students if num_students > 0 else 0.0
     return asignaciones, average
+
 
 def rocDP(course_index_by_code, capacities, requests_by_student, stop_event=None):
     """
