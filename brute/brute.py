@@ -125,11 +125,16 @@ def construir_arbol(estudiantes_dict, estudiantes, materias, stop_event=None):
     """
     global mejor_solucion, mejor_insatisfaccion
     lista_estudiantes = list(estudiantes_dict.keys())
-    
+    cancelado = False  # flag local para cortar búsqueda sin excepciones
+
     def expandir(idx, solucion_actual, estudiantes, materias):
+        nonlocal cancelado
         # Cancelación cooperativa
         if stop_event is not None and getattr(stop_event, 'is_set', None) and stop_event.is_set():
-            raise KeyboardInterrupt()
+            cancelado = True
+            return
+        if cancelado:
+            return
         global mejor_solucion, mejor_insatisfaccion
         
         # Caso base: hemos asignado materias a todos los estudiantes
@@ -147,15 +152,20 @@ def construir_arbol(estudiantes_dict, estudiantes, materias, stop_event=None):
         
         # Probar todos los subconjuntos posibles para este estudiante
         for subconjunto in subconjuntos(materias_estudiante):
+            if cancelado:
+                return
             materias_asignadas = [materia for materia, prioridad in subconjunto]
             solucion_actual[estudiante] = materias_asignadas
             
             # Continuar con el siguiente estudiante
             expandir(idx + 1, solucion_actual, estudiantes, materias)
+            if cancelado:
+                return
     
     # Inicializar y comenzar la búsqueda
-    mejor_solucion = {}
-    mejor_insatisfaccion = float('inf')
+    # Baseline: solución factible con cero asignaciones para todos los estudiantes
+    mejor_solucion = {est: [] for est in lista_estudiantes}
+    mejor_insatisfaccion = calcular_insatisfaccion(mejor_solucion, estudiantes)
 
     expandir(0, {}, estudiantes, materias)
     return mejor_solucion
