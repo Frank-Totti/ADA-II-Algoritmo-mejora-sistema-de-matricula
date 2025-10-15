@@ -22,6 +22,7 @@ import importlib.util
 import csv
 import json
 import threading
+import tracemalloc
 
 # Importar estilos y configuración
 from gui_styles import GUIStyles, GUIIcons, GUIMessages
@@ -32,7 +33,7 @@ sys.path.insert(0, current_dir)
 sys.path.insert(0, os.path.join(current_dir, 'input-output'))
 sys.path.insert(0, os.path.join(current_dir, 'voraz'))
 sys.path.insert(0, os.path.join(current_dir, 'brute'))
-sys.path.insert(0, os.path.join(current_dir, 'dinamic'))
+sys.path.insert(0, os.path.join(current_dir, 'dynamic'))
 
 # Imports de los algoritmos
 parse_input_file = None
@@ -47,17 +48,17 @@ except Exception as e:
     parse_input_file = None
 
 # Importar voraz directamente del archivo, no del módulo
-rocV = None
+rocGreedy = None
 try:
     import importlib.util
     voraz_path = os.path.join(current_dir, 'voraz', 'voraz.py')
     spec = importlib.util.spec_from_file_location("voraz_module", voraz_path)
     voraz_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(voraz_module)
-    rocV = voraz_module.rocV
+    rocGreedy = voraz_module.rocGreedy
 except Exception as e:
     print(f"Error importando voraz: {e}")
-    rocV = None
+    rocGreedy = None
 
 # Importar brute de manera similar
 construir_arbol = None
@@ -75,16 +76,16 @@ except Exception as e:
     calc_insatisfaccion_brute = None
 
 # Importar programación dinámica de manera similar a los otros algoritmos
-rocPD = None
+rocDP = None
 try:
-    dinamic_path = os.path.join(current_dir, 'dinamic', 'dinamic.py')
-    spec = importlib.util.spec_from_file_location("dinamic_module", dinamic_path)
-    dinamic_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(dinamic_module)
-    rocPD = dinamic_module.rocPD
+    dynamic_path = os.path.join(current_dir, 'dynamic', 'dynamic.py')
+    spec = importlib.util.spec_from_file_location("dynamic_module", dynamic_path)
+    dynamic_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(dynamic_module)
+    rocDP = dynamic_module.rocDP
 except Exception as e:
-    print(f"Error importando dinamic: {e}")
-    rocPD = None
+    print(f"Error importando dynamic: {e}")
+    rocDP = None
 
 
 class AlgorithmGUI:
@@ -201,14 +202,14 @@ class AlgorithmGUI:
                        style='Dark.TRadiobutton').grid(row=0, column=1, padx=15, pady=5, sticky=tk.W)
         
         # Radio button para programación dinámica (deshabilitado si no está disponible)
-        dinamic_rb = ttk.Radiobutton(algo_frame, 
+        dynamic_rb = ttk.Radiobutton(algo_frame, 
                                     text=GUIMessages.ALGO_DYNAMIC, 
                                     variable=self.algorithm, 
-                                    value="dinamic",
+                                    value="dynamic",
                                     style='Dark.TRadiobutton')
-        dinamic_rb.grid(row=0, column=2, padx=15, pady=5, sticky=tk.W)
-        if rocPD is None:
-            dinamic_rb.config(state='disabled')
+        dynamic_rb.grid(row=0, column=2, padx=15, pady=5, sticky=tk.W)
+        if rocDP is None:
+            dynamic_rb.config(state='disabled')
             # Mostrar mensaje de que no está disponible
             unavailable_label = ttk.Label(algo_frame, 
                                          text=GUIMessages.ALGO_UNAVAILABLE, 
@@ -281,16 +282,20 @@ class AlgorithmGUI:
         table_label.grid(row=0, column=0, sticky=tk.W, pady=(0, 6))
 
         # Treeview para resultados
-        columns = ("algoritmo", "archivo", "costo", "tiempo")
+        columns = ("algoritmo", "archivo", "costo", "tiempo", "mem_actual", "mem_pico")
         self.results_table = ttk.Treeview(right_panel, columns=columns, show='headings', height=10)
         self.results_table.heading("algoritmo", text="Algoritmo")
         self.results_table.heading("archivo", text="Archivo")
         self.results_table.heading("costo", text="Insatisfacción")
         self.results_table.heading("tiempo", text="Tiempo (s)")
+        self.results_table.heading("mem_actual", text="Mem Actual (MB)")
+        self.results_table.heading("mem_pico", text="Mem Pico (MB)")
         self.results_table.column("algoritmo", width=120, anchor=tk.W)
         self.results_table.column("archivo", width=140, anchor=tk.W)
         self.results_table.column("costo", width=110, anchor=tk.E)
         self.results_table.column("tiempo", width=90, anchor=tk.E)
+        self.results_table.column("mem_actual", width=120, anchor=tk.E)
+        self.results_table.column("mem_pico", width=110, anchor=tk.E)
         self.results_table.grid(row=1, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
         # Scrollbar vertical para la tabla
@@ -401,19 +406,23 @@ class AlgorithmGUI:
 
         def worker():
             try:
-                start_time = time.time()
                 # Iniciar captura
                 self.capture_output = True
                 self.current_output = []
+                # Medición de tiempo y memoria
                 if algo == "voraz":
-                    cost, assignment = self.run_voraz()
+                    metrics = self.measure_time_memory(self.run_voraz)
                 elif algo == "brute":
-                    cost, assignment = self.run_brute()
-                elif algo == "dinamic":
-                    cost, assignment = self.run_dinamic()
+                    metrics = self.measure_time_memory(self.run_brute)
+                elif algo == "dynamic":
+                    metrics = self.measure_time_memory(self.run_dynamic)
                 else:
-                    cost, assignment = 0.0, {}
-                elapsed_time = time.time() - start_time
+                    metrics = {"tiempo_s": 0.0, "memoria_actual_MB": 0.0, "memoria_pico_MB": 0.0, "resultado": (0.0, {})}
+
+                cost, assignment = metrics["resultado"]
+                elapsed_time = metrics["tiempo_s"]
+                mem_current = metrics["memoria_actual_MB"]
+                mem_peak = metrics["memoria_pico_MB"]
                 output_str = ''.join(self.current_output)
 
                 # Agregar fila y actualizar estado en el hilo principal
@@ -423,6 +432,8 @@ class AlgorithmGUI:
                         file=os.path.basename(self.file_path.get()),
                         cost=cost,
                         elapsed=elapsed_time,
+                        mem_current=mem_current,
+                        mem_peak=mem_peak,
                         output=output_str,
                         assignment=assignment
                     ),
@@ -445,11 +456,26 @@ class AlgorithmGUI:
 
         self.worker_thread = threading.Thread(target=worker, daemon=True)
         self.worker_thread.start()
+
+    def measure_time_memory(self, func):
+        """Mide tiempo y memoria de una función que retorna (costo, asignación)."""
+        tracemalloc.start()
+        inicio = time.perf_counter()
+        result = func()
+        fin = time.perf_counter()
+        current, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        return {
+            "tiempo_s": fin - inicio,
+            "memoria_actual_MB": current / 10**6,
+            "memoria_pico_MB": peak / 10**6,
+            "resultado": result
+        }
             
     def run_voraz(self):
         """Ejecuta el algoritmo voraz"""
-        if rocV is None:
-            raise ImportError("No se pudo importar el algoritmo Voraz (rocV)")
+        if rocGreedy is None:
+            raise ImportError("No se pudo importar el algoritmo Voraz (rocGreedy)")
         
         # Parsear entrada
         course_index_by_code, capacities, requests_by_student = parse_input_file(self.file_path.get())
@@ -457,12 +483,10 @@ class AlgorithmGUI:
         self.append_output("Ejecutando algoritmo voraz...\n\n")
         
         # Ejecutar algoritmo
-        assignments, unsatisfaction = rocV(course_index_by_code, capacities, requests_by_student)
-        
+        assignments, unsatisfaction = rocGreedy(course_index_by_code, capacities, requests_by_student)
         # Mostrar resultados en el formato solicitado (sin emojis)
         # Costo en primera línea y su valor en la siguiente
         self.append_output(f"{unsatisfaction:.6f}\n")
-        
         # Por cada estudiante: "ei,ai" y luego las materias asignadas una por línea
         for student in sorted(assignments.keys()):
             courses = sorted(list(assignments[student]))
@@ -474,58 +498,54 @@ class AlgorithmGUI:
         return float(unsatisfaction), assignment_out
         
     def run_brute(self):
-        """Ejecuta el algoritmo de fuerza bruta"""
-        if construir_arbol is None or calc_insatisfaccion_brute is None:
-            raise ImportError("No se pudo importar el algoritmo Brute Force")
-        
+        """Ejecuta el algoritmo de fuerza bruta usando el wrapper rocBrute"""
+        try:
+            brute_path = os.path.join(current_dir, 'brute', 'brute.py')
+            spec = importlib.util.spec_from_file_location("brute_module", brute_path)
+            brute_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(brute_module)
+            rocBrute = brute_module.rocBrute
+        except Exception as e:
+            raise ImportError(f"No se pudo importar rocBrute: {e}")
+
         # Parsear entrada
         course_index_by_code, capacities, requests_by_student = parse_input_file(self.file_path.get())
-        
-        # Ejecutar algoritmo
-        # Pasar evento de cancelación
+
+        # Ejecutar wrapper
         try:
-            solucion_optima = construir_arbol(requests_by_student, requests_by_student, capacities, stop_event=self.stop_event)
+            assignment, average_dissatisfaction = rocBrute(course_index_by_code, capacities, requests_by_student, stop_event=self.stop_event)
         except KeyboardInterrupt:
-            # Si se canceló, no hay resultados
             return 0.0, {}
-        insatisfaccion = calc_insatisfaccion_brute(solucion_optima, requests_by_student)
-        
+
         # Mostrar resultados en formato solicitado
         self.append_output("Costo\n")
-        self.append_output(f"{insatisfaccion:.6f}\n")
-        
-        # Invertir el mapeo de índices a códigos
-        course_code_by_index = {idx: code for code, idx in course_index_by_code.items()}
-        
+        self.append_output(f"{average_dissatisfaction:.6f}\n")
+
         assignment_out = {}
-        for estudiante, materias_asignadas in sorted(solucion_optima.items()):
-            # Convertir índices a códigos de materia
-            codigos_materias = []
-            for materia_idx in materias_asignadas:
-                codigo = course_code_by_index.get(materia_idx, str(materia_idx))
-                codigos_materias.append(codigo)
-            codigos_materias_sorted = sorted(codigos_materias)
-            assignment_out[estudiante] = codigos_materias_sorted
-            self.append_output(f"{estudiante},{len(codigos_materias_sorted)}\n")
-            for code in codigos_materias_sorted:
-                self.append_output(f"{code}\n")
-        return float(insatisfaccion), assignment_out
+        for student in sorted(assignment.keys()):
+            courses = sorted(list(assignment[student]))
+            assignment_out[student] = courses
+            self.append_output(f"{student},{len(courses)}\n")
+            for course in courses:
+                self.append_output(f"{course}\n")
+        return float(average_dissatisfaction), assignment_out
         
-    def run_dinamic(self):
+    def run_dynamic(self):
         """Ejecuta el algoritmo de programación dinámica"""
-        if rocPD is None:
+        if rocDP is None:
             raise ImportError(GUIMessages.ERROR_DYNAMIC_UNAVAILABLE)
         
         # Parsear entrada
         course_index_by_code, capacities, requests_by_student = parse_input_file(self.file_path.get())
         
         # Ejecutar algoritmo
-        assignment, average_dissatisfaction = rocPD(course_index_by_code, capacities, requests_by_student)
-        
+        try:
+            assignment, average_dissatisfaction = rocDP(course_index_by_code, capacities, requests_by_student, stop_event=self.stop_event)
+        except KeyboardInterrupt:
+            return 0.0, {}
         # Mostrar resultados en formato solicitado
         self.append_output("Costo\n")
         self.append_output(f"{average_dissatisfaction:.6f}\n")
-        
         assignment_out = {}
         for student in sorted(assignment.keys()):
             courses = sorted(list(assignment[student]))
@@ -544,11 +564,11 @@ class AlgorithmGUI:
         mapping = {
             'voraz': 'VORAZ',
             'brute': 'BRUTE FORCE',
-            'dinamic': 'DINÁMICA',
+            'dynamic': 'DINÁMICA',
         }
         return mapping.get(algo_key, algo_key.upper())
 
-    def add_result_row(self, algorithm: str, file: str, cost: float, elapsed: float, output: str, assignment: dict):
+    def add_result_row(self, algorithm: str, file: str, cost: float, elapsed: float, mem_current: float, mem_peak: float, output: str, assignment: dict):
         row_id = self.next_result_id
         self.next_result_id += 1
         row = {
@@ -557,6 +577,8 @@ class AlgorithmGUI:
             'file': file,
             'cost': float(cost),
             'time': float(elapsed),
+            'mem_current': float(mem_current),
+            'mem_peak': float(mem_peak),
             'output': output,
             'assignment': assignment,
         }
@@ -565,7 +587,9 @@ class AlgorithmGUI:
             algorithm,
             file,
             f"{cost:.6f}",
-            f"{elapsed:.4f}"
+            f"{elapsed:.4f}",
+            f"{mem_current:.3f}",
+            f"{mem_peak:.3f}"
         ))
 
     def clear_results_table(self):
@@ -586,7 +610,7 @@ class AlgorithmGUI:
             return
         try:
             with open(file_path, 'w', newline='', encoding='utf-8') as f:
-                fieldnames = ['algorithm', 'file', 'cost', 'time', 'assignment', 'output']
+                fieldnames = ['algorithm', 'file', 'cost', 'time', 'mem_current', 'mem_peak', 'assignment', 'output']
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
                 for r in self.results:
@@ -595,6 +619,8 @@ class AlgorithmGUI:
                         'file': r.get('file'),
                         'cost': r.get('cost'),
                         'time': r.get('time'),
+                        'mem_current': r.get('mem_current'),
+                        'mem_peak': r.get('mem_peak'),
                         'assignment': json.dumps(r.get('assignment', {}), ensure_ascii=False),
                         'output': r.get('output', ''),
                     })
@@ -614,7 +640,6 @@ class AlgorithmGUI:
         # Eliminar de la tabla
         for iid in selected:
             self.results_table.delete(iid)
-
     def on_table_select(self, event=None):
         """Muestra en el panel de salida el resultado textual guardado para la fila seleccionada."""
         selection = self.results_table.selection()
@@ -687,6 +712,9 @@ class AlgorithmGUI:
         ttk.Label(footer, text=f"Algoritmo: {row.get('algorithm')}").pack(side=tk.LEFT, padx=5)
         ttk.Label(footer, text=f"Costo: {row.get('cost'):.6f}").pack(side=tk.LEFT, padx=5)
         ttk.Label(footer, text=f"Tiempo: {row.get('time'):.4f}s").pack(side=tk.LEFT, padx=5)
+        if 'mem_current' in row and 'mem_peak' in row:
+            ttk.Label(footer, text=f"Mem Act: {row.get('mem_current'):.3f} MB").pack(side=tk.LEFT, padx=5)
+            ttk.Label(footer, text=f"Mem Pico: {row.get('mem_peak'):.3f} MB").pack(side=tk.LEFT, padx=5)
 
 
 def main():

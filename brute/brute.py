@@ -1,3 +1,23 @@
+def rocBrute(course_index_by_code, capacities, requests_by_student, stop_event=None):
+    """
+    Wrapper para el algoritmo de fuerza bruta.
+    Convierte las asignaciones de índices a códigos de materia.
+    Args:
+        course_index_by_code: Diccionario que mapea códigos de materias a índices
+        capacities: Lista de capacidades por materia (índice)
+        requests_by_student: Diccionario de solicitudes por estudiante
+        stop_event: threading.Event para cancelación cooperativa (opcional)
+    Returns:
+        tuple: (asignaciones_con_codigos, insatisfaccion_promedio)
+    """
+    solucion_optima = construir_arbol(requests_by_student, requests_by_student, capacities, stop_event=stop_event)
+    promedio = calcular_insatisfaccion(solucion_optima, requests_by_student)
+    course_code_by_index = {idx: code for code, idx in course_index_by_code.items()}
+    asignaciones_con_codigos = {}
+    for student, materias_idx in solucion_optima.items():
+        codigos = [course_code_by_index.get(idx, str(idx)) for idx in materias_idx]
+        asignaciones_con_codigos[student] = codigos
+    return asignaciones_con_codigos, promedio
 # Logíca de la solución por fuerza bruta
 import itertools
 

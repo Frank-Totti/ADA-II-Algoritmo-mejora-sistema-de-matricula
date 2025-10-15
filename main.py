@@ -2,7 +2,7 @@
 import time
 import tracemalloc
 
-from dinamic.dinamic import dinamic
+from dynamic.dynamic import dynamic
 from brute.brute import construir_arbol
 
 def take_time_and_memory(algorithm, *args, **kwargs):
@@ -30,8 +30,8 @@ def take_time_and_memory(algorithm, *args, **kwargs):
 
 def execute_algorithm(algorithm: str, capacities, request):
     """Ejecuta un algoritmo específico y mide su rendimiento."""
-    if algorithm == "dinamic":
-        return take_time_and_memory(dinamic, capacities, request)
+    if algorithm == "dynamic":
+        return take_time_and_memory(dynamic, capacities, request)
 
     elif algorithm == "brute":
         #return take_time_and_memory(construir_arbol, capacities, request)
