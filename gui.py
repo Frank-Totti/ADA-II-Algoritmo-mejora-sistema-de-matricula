@@ -30,7 +30,7 @@ from gui_styles import GUIStyles, GUIIcons, GUIMessages
 # Agregar paths necesarios para imports
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_dir)
-sys.path.insert(0, os.path.join(current_dir, 'input-output'))
+sys.path.insert(0, os.path.join(current_dir, 'input_output'))
 sys.path.insert(0, os.path.join(current_dir, 'voraz'))
 sys.path.insert(0, os.path.join(current_dir, 'brute'))
 sys.path.insert(0, os.path.join(current_dir, 'dynamic'))
@@ -38,7 +38,7 @@ sys.path.insert(0, os.path.join(current_dir, 'dynamic'))
 # Imports de los algoritmos
 parse_input_file = None
 try:
-    input_path = os.path.join(current_dir, 'input-output', 'input.py')
+    input_path = os.path.join(current_dir, 'input_output', 'input.py')
     spec = importlib.util.spec_from_file_location("input_module", input_path)
     input_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(input_module)
@@ -484,7 +484,7 @@ class AlgorithmGUI:
         # Parsear entrada
         course_index_by_code, capacities, requests_by_student = parse_input_file(self.file_path.get())
         
-        self.append_output("Ejecutando algoritmo voraz...\n\n")
+        
         
         # Ejecutar algoritmo
         assignments, unsatisfaction = rocGreedy(course_index_by_code, capacities, requests_by_student)
@@ -522,7 +522,7 @@ class AlgorithmGUI:
             return 0.0, {}
 
         # Mostrar resultados en formato solicitado
-        self.append_output("Costo\n")
+   
         self.append_output(f"{average_dissatisfaction:.6f}\n")
 
         assignment_out = {}
@@ -548,7 +548,6 @@ class AlgorithmGUI:
         except KeyboardInterrupt:
             return 0.0, {}
         # Mostrar resultados en formato solicitado
-        self.append_output("Costo\n")
         self.append_output(f"{average_dissatisfaction:.6f}\n")
         assignment_out = {}
         for student in sorted(assignment.keys()):

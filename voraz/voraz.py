@@ -1,4 +1,3 @@
-# Logíca de la solución voraz
 """
 Algoritmo Voraz para Repartición Óptima de Cupos
 ================================================
@@ -17,42 +16,16 @@ Estrategia VDC:
     - Asigna cupos según disponibilidad
     - Previene asignaciones duplicadas por estudiante
     - Optimiza la satisfacción global del sistema
-
 """
 
 import sys
 import os
 from typing import Dict, List, Tuple
 
+
 # Configuración de imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'input-output'))
-from input import gamma
-
-def calcular_insatisfaccion(asignadas, opciones_totales):
-    """
-    Calcula la insatisfacción de un estudiante según la fórmula del proyecto.
-    
-    Fórmula: (1 - k'/k) * (Σp_no_asignadas / γ(k))
-    donde:
-        - k = número total de materias solicitadas
-        - k' = número de materias asignadas
-        - γ(k) = 3k - 1
-    
-    Args:
-        asignadas: Conjunto de códigos de materias asignadas
-        opciones_totales: Lista de tuplas (codigo_materia, prioridad) solicitadas
-        
-    Returns:
-        float: Valor de insatisfacción del estudiante
-    """
-    k = len(opciones_totales)
-    if k == 0:
-        return 0.0
-    
-    assigned_count = len(asignadas)
-    unassigned_sum = sum(p for (c, p) in opciones_totales if c not in asignadas)
-    
-    return (1 - assigned_count / k) * (unassigned_sum / gamma(k))
+from input_output import calcular_insatisfaccion_individual
 
 
 def ordenar_por_prioridad(solicitudes):
@@ -122,8 +95,11 @@ def voraz(capacities, requests_by_student):
     num_students = len(requests_by_student)
     
     for student_code, requests in requests_by_student.items():
-        assigned_set = set(assignments[student_code])
-        student_insatisfaction = calcular_insatisfaccion(assigned_set, requests)
+        # Convertir índices asignados a tuplas (curso_idx, prioridad)
+        assigned_indices = set(assignments[student_code])
+        # Filtrar de requests solo las materias asignadas para mantener sus prioridades
+        assigned_with_priority = [(c, p) for c, p in requests if c in assigned_indices]
+        student_insatisfaction = calcular_insatisfaccion_individual(assigned_with_priority, requests)
         total_insatisfaction += student_insatisfaction
     
     promedio = total_insatisfaction / num_students if num_students > 0 else 0.0
