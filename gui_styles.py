@@ -202,7 +202,7 @@ class GUIMessages:
     ALGO_NAMES = {
         'voraz': f'{GUIIcons.VORAZ} VORAZ',
         'brute': f'{GUIIcons.BRUTE} FUERZA BRUTA',
-        'dinamic': f'{GUIIcons.DYNAMIC} PROGRAMACIÓN DINÁMICA'
+        'dynamic': f'{GUIIcons.DYNAMIC} PROGRAMACIÓN DINÁMICA'
     }
     
     # Errores
@@ -237,7 +237,7 @@ class GUIMessages:
     ERROR_DYNAMIC_UNAVAILABLE = (
         f"{GUIIcons.ERROR} El algoritmo de Programación Dinámica no está disponible.\n\n"
         f"📝 Posibles soluciones:\n"
-        "1. Implementa el algoritmo en: dinamic/dinamic.py\n"
+    "1. Implementa el algoritmo en: dynamic/dynamic.py\n"
         "2. O copia la implementación desde otro módulo\n"
-        "3. Asegúrate de exportar la función 'rocPD'"
+    "3. Asegúrate de exportar la función 'rocDP'"
     )

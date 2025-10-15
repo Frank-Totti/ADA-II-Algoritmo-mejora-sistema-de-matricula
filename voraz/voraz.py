@@ -4,7 +4,7 @@ Algoritmo Voraz para Repartición Óptima de Cupos
 ================================================
 
 Proyecto: Análisis y Diseño de Algoritmos II
-Algoritmo: rocV - Estrategia VDC (Variable Demand Criticality)
+Algoritmo: rocGreedy - Estrategia VDC (Variable Demand Criticality)
 Fecha: 14 de Octubre 2025
 
 Descripción:
@@ -131,7 +131,7 @@ def voraz(capacities, requests_by_student):
     return assignments, promedio
 
 
-def rocV(course_index_by_code, capacities, requests_by_student):
+def rocGreedy(course_index_by_code, capacities, requests_by_student):
     """
     Wrapper para el algoritmo voraz.
     
