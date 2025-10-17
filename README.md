@@ -4,7 +4,11 @@ Este es un proyecto que busca construir un algoritmo que mejore el procedimiento
 
 ## Inicio Rápido
 
-Para comenzar inmediatamente, consulta [docs/QUICKSTART.md](docs/QUICKSTART.md)
+**El ejecutable está listo para usar en la raíz del proyecto!**
+
+Para comenzar inmediatamente:
+1. Ejecuta `SistemaMatricula.exe` (Windows) desde la raíz del proyecto
+2. O consulta [docs/QUICKSTART.md](docs/QUICKSTART.md) para más detalles
 
 ## Descripción
 
@@ -16,12 +20,14 @@ Sistema inteligente de asignación de cupos que implementa y compara tres algori
 
 ## Uso Rápido - Ejecutable Standalone
 
-### Descargar Ejecutable Pre-compilado
+### Ejecutable Incluido (Listo para Usar)
 
-El proyecto incluye ejecutables standalone que NO requieren Python instalado:
+El proyecto incluye un ejecutable pre-compilado en la raíz del repositorio:
 
-- **Windows**: `dist/SistemaMatricula.exe`
-- **Linux**: `dist/SistemaMatricula`
+- **Windows**: `SistemaMatricula.exe` (en la raíz)
+- **Alternativa**: `dist/SistemaMatricula.exe`
+
+**Simplemente haz doble clic en el archivo para ejecutar!**
 
 ### Construir tu Propio Ejecutable
 
