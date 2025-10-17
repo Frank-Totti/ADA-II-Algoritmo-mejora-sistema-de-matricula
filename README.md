@@ -2,6 +2,10 @@
 
 Este es un proyecto que busca construir un algoritmo que mejore el procedimiento de matrícula utilizando diferentes enfoques algorítmicos.
 
+## Inicio Rápido
+
+Para comenzar inmediatamente, consulta [docs/QUICKSTART.md](docs/QUICKSTART.md)
+
 ## Descripción
 
 Sistema inteligente de asignación de cupos que implementa y compara tres algoritmos diferentes:
