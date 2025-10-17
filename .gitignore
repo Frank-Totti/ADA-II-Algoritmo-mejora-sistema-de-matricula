@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist-packages/
+eggs/
+.eggs/
+*.egg
+
+# Virtual Environment
+.venv/
+venv/
+env/
+ENV/
+
+# PyInstaller
+build/
+dist/
+# *.spec  # Commented out - we want to keep the spec file in version control
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Test data (opcional - descomenta si quieres excluir data/)
+# data/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
