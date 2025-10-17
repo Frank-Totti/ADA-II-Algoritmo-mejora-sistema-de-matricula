@@ -7,6 +7,7 @@ Este es un proyecto que busca construir un algoritmo que mejore el procedimiento
 **El ejecutable está listo para usar en la raíz del proyecto!**
 
 Para comenzar inmediatamente:
+
 1. Ejecuta `SistemaMatricula.exe` (Windows) desde la raíz del proyecto
 2. O consulta [docs/QUICKSTART.md](docs/QUICKSTART.md) para más detalles
 
@@ -128,6 +129,74 @@ Los algoritmos se evalúan según:
 - **Costo de Insatisfacción**: Métrica de calidad de asignación
 - **Tiempo de Ejecución**: Performance temporal
 - **Uso de Memoria**: Eficiencia espacial
+
+## Detalles de Implementación
+
+### Entorno de Desarrollo
+
+La implementación se realizó en **Python 3.13**, aprovechando su sintaxis concisa y bibliotecas estándar. El código está organizado en módulos separados para facilitar la mantenibilidad:
+
+- **`input_output/`**: Lectura/escritura de archivos y cálculo de insatisfacción
+- **`brute/`**: Implementación del algoritmo de fuerza bruta
+- **`dynamic/`**: Implementación del algoritmo de programación dinámica
+- **`voraz/`**: Implementación del algoritmo voraz
+- **`gui.py`**: Interfaz gráfica para ejecutar y comparar algoritmos
+
+### Funciones Principales
+
+Cada algoritmo expone una función wrapper que encapsula su ejecución completa:
+
+#### rocBrute (Fuerza Bruta)
+
+```python
+def rocBrute(course_index_by_code, capacities, requests_by_student, stop_event=None)
+```
+
+- Explora todas las posibles asignaciones de materias a estudiantes
+- Encuentra la solución óptima que minimiza la insatisfacción global
+- Retorna: tupla `(assignment, average_dissatisfaction)`
+
+#### rocGreedy (Voraz)
+
+```python
+def rocGreedy(course_index_by_code, capacities, requests_by_student)
+```
+
+- Procesa estudiantes secuencialmente según prioridad
+- Asigna materias de mayor a menor preferencia mientras haya cupo
+- Retorna: tupla `(assignments, unsatisfaction)`
+
+#### rocDP (Programación Dinámica)
+
+```python
+def rocDP(course_index_by_code, capacities, requests_by_student, stop_event=None)
+```
+
+- Utiliza memoización para evitar recálculos
+- Construye la solución óptima de forma incremental
+- Reconstruye la asignación final desde la tabla de estados
+- Retorna: tupla `(assignment, average_dissatisfaction)`
+
+### Formato de Entrada/Salida
+
+**Archivo de Entrada:**
+```
+M1 50    # Materia M1 con capacidad de 50 estudiantes
+M2 30
+---      # Separador
+E1 M1 M2 # Estudiante E1 prefiere M1, luego M2
+E2 M2 M1
+```
+
+**Salida del Programa:**
+```
+0.333333           # Insatisfacción promedio
+E1,2               # Estudiante E1 recibió 2 materias
+M1                 # Primera materia asignada
+M2                 # Segunda materia asignada
+E2,1
+M2
+```
 
 ## Contribuciones
 
