@@ -69,12 +69,15 @@ El ejecutable se generará en: `dist/SistemaMatricula`
 ## 🚀 Uso del Ejecutable
 
 ### Windows
+
 Doble clic en `SistemaMatricula.exe` o ejecutar desde PowerShell:
+
 ```powershell
 .\dist\SistemaMatricula.exe
 ```
 
 ### Linux
+
 ```bash
 ./dist/SistemaMatricula
 ```
@@ -82,6 +85,7 @@ Doble clic en `SistemaMatricula.exe` o ejecutar desde PowerShell:
 ## 📁 Estructura de Archivos
 
 El ejecutable incluye:
+
 - ✅ GUI (interfaz gráfica)
 - ✅ Algoritmo Voraz
 - ✅ Algoritmo de Fuerza Bruta
@@ -111,14 +115,18 @@ Para modificar la configuración del build, edita `SistemaMatricula.spec`:
 ## 🐛 Troubleshooting
 
 ### Error: "No module named 'tkinter'"
+
 PyInstaller debe detectar tkinter automáticamente. Si no lo hace, agrega a `hiddenimports` en el spec.
 
 ### El ejecutable es muy grande
+
 - Considera usar `--onefile` si prefieres un solo archivo
 - Verifica que no se estén incluyendo módulos innecesarios
 
 ### Error al ejecutar en Linux
+
 Asegúrate de que el archivo tenga permisos de ejecución:
+
 ```bash
 chmod +x dist/SistemaMatricula
 ```
@@ -126,6 +134,7 @@ chmod +x dist/SistemaMatricula
 ## 📝 Licencia y Distribución
 
 Al distribuir el ejecutable, asegúrate de:
+
 - Incluir instrucciones de uso
 - Proporcionar archivos de prueba de ejemplo
 - Mencionar que el directorio `data/` debe estar disponible para las pruebas

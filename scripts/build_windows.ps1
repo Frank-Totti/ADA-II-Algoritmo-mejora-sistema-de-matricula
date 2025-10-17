@@ -6,6 +6,11 @@ Write-Host "Building Sistema de Matricula (Windows)" -ForegroundColor Cyan
 Write-Host "=====================================" -ForegroundColor Cyan
 Write-Host ""
 
+# Cambiar al directorio raíz del proyecto
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectRoot = Split-Path -Parent $scriptDir
+Set-Location $projectRoot
+
 # Activar entorno virtual si existe
 if (Test-Path ".venv\Scripts\Activate.ps1") {
     Write-Host "Activando entorno virtual..." -ForegroundColor Yellow
@@ -30,7 +35,7 @@ if (-not $pyinstaller) {
 # Construir ejecutable
 Write-Host ""
 Write-Host "Construyendo ejecutable..." -ForegroundColor Green
-pyinstaller --clean SistemaMatricula.spec
+pyinstaller --clean scripts\SistemaMatricula.spec
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""

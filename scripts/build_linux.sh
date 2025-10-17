@@ -7,6 +7,11 @@ echo "Building Sistema de Matricula (Linux)"
 echo "====================================="
 echo ""
 
+# Cambiar al directorio raíz del proyecto
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT"
+
 # Activar entorno virtual si existe
 if [ -f ".venv/bin/activate" ]; then
     echo "Activando entorno virtual..."
@@ -28,7 +33,7 @@ fi
 # Construir ejecutable
 echo ""
 echo "Construyendo ejecutable..."
-pyinstaller --clean SistemaMatricula.spec
+pyinstaller --clean scripts/SistemaMatricula.spec
 
 if [ $? -eq 0 ]; then
     echo ""

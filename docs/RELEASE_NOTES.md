@@ -1,6 +1,7 @@
 # 📦 Release Notes - Executable Branch
 
 ## Version: 1.0.0 - Executable Distribution
+
 **Branch**: `executable`
 **Date**: October 17, 2025
 
@@ -9,7 +10,9 @@
 ## 🎉 What's New
 
 ### ✨ Standalone Executable Support
+
 - **Windows Executable** (`SistemaMatricula.exe`)
+
   - Single-file portable application
   - No Python installation required
   - File size: ~10-15 MB
@@ -21,11 +24,11 @@
   - Compatible with most modern Linux distributions
 
 ### 🛠️ Build System
+
 - **Automated Build Scripts**
   - `build_windows.ps1`: PowerShell script for Windows
   - `build_linux.sh`: Bash script for Linux
   - `build.ps1` / `build.sh`: Auto-detection scripts
-  
 - **PyInstaller Configuration**
   - Optimized spec file for minimal size
   - Excludes `data/` directory to reduce size
@@ -33,12 +36,14 @@
   - Hidden console for clean GUI experience
 
 ### 📚 Comprehensive Documentation
+
 - **BUILD_README.md**: Complete build instructions
 - **USAGE.md**: End-user guide for the executable
 - **Updated README.md**: Project overview with executable info
 - **Troubleshooting guides**: Common issues and solutions
 
 ### 🎨 GUI Features (Included in Executable)
+
 - Modern dark-themed interface
 - Three algorithm implementations:
   - Voraz (Greedy)
@@ -55,6 +60,7 @@
 ## 📥 Download & Installation
 
 ### For End Users (No Development Required)
+
 1. Download the appropriate executable:
    - Windows: `dist/SistemaMatricula.exe`
    - Linux: `dist/SistemaMatricula`
@@ -62,6 +68,7 @@
 3. Select your input file and run algorithms
 
 ### For Developers
+
 ```bash
 # Clone the repository
 git clone https://github.com/Frank-Totti/ADA-II-Algoritmo-mejora-sistema-de-matricula.git
@@ -82,6 +89,7 @@ git checkout executable
 ## 🔧 Technical Details
 
 ### Build Configuration
+
 - **Python Version**: 3.8+
 - **PyInstaller Version**: 6.16.0
 - **Build Type**: One-file executable
@@ -90,6 +98,7 @@ git checkout executable
 - **Icon**: Default (customizable)
 
 ### Included Modules
+
 - ✅ GUI (`gui.py`, `gui_styles.py`)
 - ✅ Voraz algorithm
 - ✅ Brute Force algorithm
@@ -98,6 +107,7 @@ git checkout executable
 - ✅ Tkinter and all GUI dependencies
 
 ### Excluded from Executable
+
 - ❌ `data/` directory (test files - provide separately)
 - ❌ `build/` directory (build artifacts)
 - ❌ `__pycache__/` (Python cache)
@@ -108,6 +118,7 @@ git checkout executable
 ## 🧪 Testing
 
 The executable has been tested with:
+
 - ✅ All 46 test cases from `data/` directory
 - ✅ Large datasets (1000+ students)
 - ✅ Edge cases (no students, no courses, etc.)
@@ -119,14 +130,17 @@ The executable has been tested with:
 ## 📊 Performance
 
 ### Executable Size
+
 - **Windows**: ~10.62 MB (compressed)
 - **Linux**: ~12-15 MB (varies by distribution)
 
 ### Startup Time
+
 - **Cold start**: < 3 seconds
 - **Subsequent runs**: < 1 second
 
 ### Memory Usage
+
 - **Idle**: ~30-50 MB
 - **Running algorithms**: Varies by input size
   - Small datasets (<100 students): 50-100 MB
@@ -137,9 +151,11 @@ The executable has been tested with:
 ## 🐛 Known Issues
 
 1. **Windows Defender**: May flag as unknown publisher
+
    - **Solution**: Mark as safe or add to exclusions
 
 2. **Linux Permissions**: May need manual chmod
+
    - **Solution**: `chmod +x SistemaMatricula`
 
 3. **Large Datasets**: Brute Force can be very slow
@@ -150,6 +166,7 @@ The executable has been tested with:
 ## 🔄 Migration from Source Code
 
 If you're currently running from source:
+
 1. No configuration changes needed
 2. Same input file format
 3. Same output format
@@ -161,6 +178,7 @@ If you're currently running from source:
 ## 📝 Changelog
 
 ### Added
+
 - PyInstaller build configuration
 - Windows and Linux build scripts
 - Comprehensive build documentation
@@ -169,10 +187,12 @@ If you're currently running from source:
 - Git ignore rules for build artifacts
 
 ### Changed
+
 - README now includes executable instructions
 - Project structure optimized for distribution
 
 ### Excluded
+
 - Test data from executable package (provide separately)
 
 ---
@@ -180,6 +200,7 @@ If you're currently running from source:
 ## 🚀 Future Enhancements
 
 Planned for future releases:
+
 - [ ] macOS executable support
 - [ ] Custom application icon
 - [ ] Installer packages (MSI for Windows, DEB for Linux)
@@ -193,6 +214,7 @@ Planned for future releases:
 ## 🤝 Contributing
 
 Contributions welcome! To add executable support features:
+
 1. Fork the `executable` branch
 2. Make your changes
 3. Test the build on your platform
